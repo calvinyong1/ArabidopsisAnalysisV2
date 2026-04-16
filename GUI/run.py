@@ -88,12 +88,16 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         data["daysAngles"] = self.daysAnglesField.text()
 
         # map values for compatibility with 1_analysis.py
-        data["rpi"] = self.rpiField.text()
-        data["rpiField"] = self.rpiField.text()
-        data["cam"] = self.cameraField.text()
-        data["cameraField"] = self.cameraField.text()
-        data["plant"] = self.plantField.text()
-        data["plantField"] = self.plantField.text()
+        rpi_val = self.rpiField.text().strip() or "1"
+        cam_val = self.cameraField.text().strip() or "1"
+        plant_val = self.plantField.text().strip() or "1"
+        data["rpi"] = rpi_val
+        data["rpiField"] = rpi_val
+        data["cam"] = cam_val
+        data["cameraField"] = cam_val
+        data["plant"] = plant_val
+        data["plantField"] = plant_val
+        data["experimentName"] = data["experimentName"].strip() or "1"
         data["Experiment"] = data["experimentName"]
         data["Images"] = data["videoField"]
         data["processingLimit"] = data["processingLimitField"]
@@ -436,6 +440,9 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
             lambda: self.validate_numeric_input(self.captureIntervalField))
         self.captureIntervalField_3.editingFinished.connect(
             lambda: self.validate_numeric_input(self.captureIntervalField_3))
+
+        for field in [self.rpiField, self.cameraField, self.plantField, self.experimentName]:
+            field.editingFinished.connect(lambda f=field: f.setText(f.text().strip() or "1"))
 
     def get_image_paths(self):
         if not os.path.exists(os.path.join(self.selected_plant, "log.txt")):

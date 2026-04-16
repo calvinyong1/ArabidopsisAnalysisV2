@@ -16,17 +16,32 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import cv2 
+import cv2
 import numpy as np
 
+# State for custom ROI selector
+_roi_state = {
+    'start': None,
+    'end': None,
+    'drawing': False,
+    'done': False,
+}
+
+def _roi_mouse_callback(event, x, y, flags, param):
+    s = _roi_state
+    if event == cv2.EVENT_LBUTTONDOWN:
+        s['start'] = (x, y)
+        s['end'] = (x, y)
+        s['drawing'] = True
+        s['done'] = False
+    elif event == cv2.EVENT_MOUSEMOVE and s['drawing']:
+        s['end'] = (x, y)
+    elif event == cv2.EVENT_LBUTTONUP:
+        s['end'] = (x, y)
+        s['drawing'] = False
+        s['done'] = True
+
 def selectROI(image):
-        instructions = (
-            f"Select Plant ROI\n"
-            "1. Click and drag to select region\n"
-            "2. Press ENTER TWICE to confirm selection\n"
-            "3. Press 'r' to redo selection\n"
-            "4. Press 'q' to quit analysis"
-        )
         window_name = "Select Plant ROI"
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
@@ -37,59 +52,70 @@ def selectROI(image):
         display_h = int(h_orig * scale)
         cv2.resizeWindow(window_name, display_w, display_h)
 
-        # Scale image down once for display
         img_small = cv2.resize(image, (display_w, display_h), interpolation=cv2.INTER_AREA)
+
+        # Reset state
+        for k in _roi_state:
+            _roi_state[k] = None if k != 'drawing' and k != 'done' else False
+        cv2.setMouseCallback(window_name, _roi_mouse_callback)
+
+        font = cv2.FONT_HERSHEY_SIMPLEX
 
         while True:
             img_copy = img_small.copy()
 
-            # Add instructions to the image
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            font_scale = 0.8
-            thickness = 2
-            color = (255, 255, 255)
+            # Draw live rectangle while dragging or after release
+            s = _roi_state
+            if s['start'] is not None and s['end'] is not None:
+                cv2.rectangle(img_copy, s['start'], s['end'], (0, 255, 0), 2)
+
+            # Instructions
+            if s['done']:
+                lines = [
+                    "Selection made.",
+                    "ENTER: confirm   R: redo   Q: quit",
+                ]
+            else:
+                lines = [
+                    "Select Plant ROI",
+                    "Click and drag to select region",
+                    "ENTER: confirm   R: redo   Q: quit",
+                ]
 
             y0 = 25
-            for i, line in enumerate(instructions.split('\n')):
-                y = y0 + i * 25
-                cv2.putText(img_copy, line, (10, y), font, font_scale, color, thickness)
+            for idx, line in enumerate(lines):
+                cv2.putText(img_copy, line, (10, y0 + idx * 28), font, 0.8, (255, 255, 255), 2)
 
-            # Draw ROI on the downscaled image
-            roi_small = cv2.selectROI(window_name, img_copy, fromCenter=False, showCrosshair=True)
-
-            if roi_small[2] == 0 or roi_small[3] == 0:
-                key = cv2.waitKey(1)
-                if key == ord('q'):
-                    cv2.destroyWindow(window_name)
-                    return None
-                print("Invalid selection, please try again or press 'q' to quit")
-                continue
-
-            # Scale ROI back to original resolution
-            roi = (
-                int(roi_small[0] / scale),
-                int(roi_small[1] / scale),
-                int(roi_small[2] / scale),
-                int(roi_small[3] / scale),
-            )
-
-            # Draw the selection for confirmation
-            cv2.rectangle(img_copy, (roi_small[0], roi_small[1]),
-                         (roi_small[0] + roi_small[2], roi_small[1] + roi_small[3]), (255, 255, 255), 2)
             cv2.imshow(window_name, img_copy)
+            key = cv2.waitKey(16) & 0xFF  # ~60 fps
 
-            print(f"\nSelection made.")
-            print("Press 'r' to redo selection or 'q' to quit analysis")
-
-            key = cv2.waitKey(0) & 0xFF
             if key == ord('q'):
                 cv2.destroyWindow(window_name)
                 return None
             elif key == ord('r'):
-                continue
-            else:
+                for k in _roi_state:
+                    _roi_state[k] = None if k != 'drawing' and k != 'done' else False
+            elif key in [13, 10]:  # Enter
+                if not s['done']:
+                    continue
+                x0, y0_ = s['start']
+                x1, y1 = s['end']
+                rx, ry = min(x0, x1), min(y0_, y1)
+                rw, rh = abs(x1 - x0), abs(y1 - y0_)
+                if rw == 0 or rh == 0:
+                    print("Invalid selection, please try again")
+                    continue
+                roi = (
+                    int(rx / scale),
+                    int(ry / scale),
+                    int(rw / scale),
+                    int(rh / scale),
+                )
                 cv2.destroyWindow(window_name)
                 return roi
+
+            if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
+                return None
             
 pos = None
 
