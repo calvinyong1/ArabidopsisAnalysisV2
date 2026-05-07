@@ -1,245 +1,129 @@
 # ChronoRoot 2.0
 
-![Figure](Documents/images/mainFigure.png)
+ChronoRoot 2.0 is an automated pipeline for plant root phenotyping from time-lapse infrared images. It combines AI-powered segmentation (nnUNet) with graph-based root architecture analysis across two analysis interfaces.
 
-[![DOI](https://img.shields.io/badge/arXiv-2504.14736-red.svg)](http://arxiv.org/abs/2504.14736)
-[![GitHub license](https://img.shields.io/github/license/ngaggion/ChronoRoot2)](LICENSE)
-[![Docker](https://img.shields.io/docker/pulls/ngaggion/chronoroot.svg)](https://hub.docker.com/r/ngaggion/chronoroot)
-[![Hugging Face Models](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-yellow)](https://huggingface.co/ngaggion/models)
+![System Overview](Documents/images/mainFigure.png)
 
-## An Open AI-Powered Platform for 2D Temporal Plant Phenotyping
+## Applications
 
-**ChronoRoot 2.0** is an integrated open-source platform that combines affordable hardware with advanced artificial intelligence to enable sophisticated temporal plant phenotyping. 
+| App | Description |
+|-----|-------------|
+| **ChronoRoot Segmentation** | Segments infrared images into 6 root structure classes using nnUNet |
+| **ChronoRoot Analysis** | Detailed RSA analysis of individual plants (graph-based, RSML export) |
 
-Depending on your research needs, the system offers two distinct workflows: a **Detailed Analysis** for individual plant architecture or a **High-Throughput Screening** for analyzing large populations.
+---
 
-### Key Features
-* **Multi-organ tracking:** Segment and track six distinct plant structures (main root, lateral roots, seed, hypocotyl, leaves, and petiole).
-* **Deep Learning Integration:** Powered by nnU-Net for robust segmentation.
-* **Novel Metrics:** Comprehensive measurements including gravitropic response parameters.
-* **Quality Control:** Interfaces designed for real-time human-in-the-loop validation.
+## Installation (macOS)
 
-## Workflow Overview
+> **Requirements:** macOS 12 or later, Intel or Apple Silicon (M-series).
+> NVIDIA GPU acceleration is not available on macOS — segmentation runs on CPU.
 
-![Figure](Documents/images/usage_diagram.png)
+### Step 1 — Download or clone the repository
 
-A typical ChronoRoot 2.0 experiment follows this pipeline:
-
-1.  **Data Acquisition**: Capture temporal image sequences (typically every 15 mins) using the [ChronoRoot Hardware](https://github.com/ThomasBlein/ChronoRootModuleHardware).
-2.  **Segmentation**: Process raw images using the **Segmentation App**. This utilizes GPU acceleration to automatically identify plant organs.
-3.  **Analysis**: Load the segmented data into one of the analysis interfaces:
-    * **ChronoRoot App**: For detailed architectural analysis of individual plants.
-    * **Screening App**: For high-throughput automated analysis of multiple plants.
-4.  **Reporting**: Export statistical analysis, visualizations, and group comparisons.
-
-## System Requirements
-
-Before installing, ensure your system meets the following criteria:
-
-| Component | Requirement |
-| :--- | :--- |
-| **OS** | **Linux** (Ubuntu 20.04+), **Windows 10** (via WSL2), or **macOS** (Docker only) |
-| **RAM** | 8 GB minimum (16 GB recommended) |
-| **Storage** | ~15 GB (Disk space for images/containers) |
-| **GPU** | NVIDIA GPU with CUDA 11.0+ (Highly recommended for Segmentation) |
-
-> **Note on macOS:** Native installation is not supported. Mac users must use the Docker method.
-
-## Installation & Getting Started
-
-ChronoRoot 2.0 offers automated installers that set up the environment and create **Desktop Shortcuts** for a point-and-click experience. Choose the method that best fits your setup.
-
-Both native and apptainer installations provide three applications, with shortcuts as follows:
-
-| Icon | Application | Description |
-| --- | --- | --- |
-| <img src="logo.ico" width="48"> | **ChronoRoot App** | Standard detailed architectural analysis. |
-| <img src="logo_screening.ico" width="48"> | **ChronoRoot Screening** | High-throughput automated screening. |
-| <img src="logo_seg.ico" width="48"> | **ChronoRoot Segmentation** | nnU-Net image segmentation. | 
-
-### Option 1: Native / Conda Installation (Recommended)
-*Best for: Personal computers (Linux or Windows WSL) where you want desktop integration.*
-
-#### **A. For Ubuntu / Linux**
 ```bash
-wget https://raw.githubusercontent.com/chronoroot/ChronoRoot2/master/installer_conda_linux.sh
-bash installer_conda_linux.sh
+git clone <repo-url>
+cd ArabidopsisAnalysis
 ```
 
-#### **B. For Windows (via WSL2)**
-
-1. Ensure WSL2 is installed and open your Ubuntu terminal.
-2. Run the following:
+### Step 2 — Run the installer
 
 ```bash
-wget https://raw.githubusercontent.com/chronoroot/ChronoRoot2/master/installer_conda_wsl.sh
-bash installer_conda_wsl.sh
+bash installer_conda_mac.sh
 ```
 
-### Option 2: Apptainer / Singularity
+The installer will automatically:
 
-*Best for: HPC Clusters or users preferring single-file containers.*
+1. **Detect your Mac architecture** (Apple Silicon or Intel) and note that NVIDIA GPU is not available on macOS.
+2. **Install Miniconda** (if not already installed) — downloads the correct build for your architecture and installs it silently to `~/miniconda3`. You will be prompted to restart your terminal once after this step.
+3. **Install Homebrew and libzbar** (if Homebrew is already installed) — `libzbar` is required for QR code plate identification. If Homebrew is missing, the installer will warn you and ask whether to continue without QR support.
+   - To install Homebrew first: visit [https://brew.sh](https://brew.sh)
+4. **Create the `ChronoRoot` Conda environment** from `environment.yml`, which includes:
+   - Python 3.13, PyQt5, NumPy, OpenCV, scikit-image, scikit-fda, nnUNetv2, and all other dependencies.
+   - If the environment already exists, it updates it in place.
+5. **Download segmentation model weights** from Hugging Face into `segmentationApp/models/`.
+6. **Create macOS `.app` launchers** in `~/Applications/` with desktop shortcuts on `~/Desktop/`:
+   - `ChronoRoot Analysis.app`
+   - `ChronoRoot Segmentation.app`
 
-#### **Linux Apptainer**
+### Step 3 — First launch (Gatekeeper)
 
-```bash
-wget https://raw.githubusercontent.com/chronoroot/ChronoRoot2/master/apptainerInstaller/installer_linux.sh
-bash installer_linux.sh
-```
+macOS will block unsigned apps by default. To open either app for the first time:
 
-#### **Windows Apptainer (WSL)**
+1. **Right-click** the `.app` on the Desktop (or in `~/Applications/`).
+2. Select **Open**.
+3. Click **Open** in the confirmation dialog.
 
-```bash
-wget https://raw.githubusercontent.com/chronoroot/ChronoRoot2/master/apptainerInstaller/installer_windows.sh
-bash installer_windows.sh
-```
+You only need to do this once per app.
 
-### Option 3: Docker
+---
 
-*Best for: macOS users or advanced sandbox environments.*
+## Running from the Terminal
 
-If you are using Docker, you will interact with the software via the terminal.
-
-**1. Pull the Image:**
-
-```bash
-docker pull ngaggion/chronoroot:latest
-```
-
-**2. Run the Container:**
-
-**Linux:**
+Activate the environment and launch any app directly:
 
 ```bash
-xhost +local:docker
-MOUNT="YOUR_LOCAL_DATA_PATH"
+conda activate ChronoRoot
 
-docker run -it --gpus all \
-    -u $(id -u):$(id -g) \
-    -v /etc/passwd:/etc/passwd:ro \
-    -v /etc/group:/etc/group:ro \
-    -v $MOUNT:/DATA/ \
-    -e DISPLAY=$DISPLAY \
-    -v /tmp/.X11-unix:/tmp/.X11-unix \
-    --shm-size=8gb \
-    ngaggion/chronoroot:latest
-```
+# Standard single-plant analysis interface
+cd singlePlantAnalysis
+python run.py
 
-**Windows (WSL2):**
-
-```bash
-MOUNT="/mnt/c/path/to/your/data"
-# Ensure X Server (like VcXsrv) is running if not using WSLg
-
-docker run -it --gpus all \
-    -u $(id -u):$(id -g) \
-    -v /etc/passwd:/etc/passwd:ro \
-    -v /etc/group:/etc/group:ro \
-    -v $MOUNT:/DATA/ \
-    -v /tmp/.X11-unix:/tmp/.X11-unix \
-    -v /mnt/wslg:/mnt/wslg \
-    -e DISPLAY -e WAYLAND_DISPLAY -e XDG_RUNTIME_DIR -e PULSE_SERVER \
-    --shm-size=8gb \
-    ngaggion/chronoroot:latest
-```
-
-**3. Docker CLI Commands:**
-Once inside the container, use these aliases to launch the apps:
-
-* `segmentation` : Launches Segmentation App
-* `chronoroot` : Launches Standard Interface
-* `screening` : Launches Screening Interface
-
-## Note on Segmentation Models
-
-The pre-trained nnU-Net weights are now hosted on **[Hugging Face](https://huggingface.co/ngaggion/models)** to keep the repository lightweight. The installers above will ask to download them automatically.
-
-If you need to update them later manually, run:
-```bash
+# Segmentation module
 cd segmentationApp
+python run.py
+```
+
+---
+
+## Updating Model Weights
+
+If you need to re-download or update the segmentation model weights:
+
+```bash
+conda activate ChronoRoot
+cd segmentationApp
+chmod +x download_weights.sh
 ./download_weights.sh
 ```
 
-## Documentation & Tutorials
+---
 
-For comprehensive, step-by-step guides, please visit our **[Official Documentation Website](https://chronoroot.github.io/)**.
+## Other Platforms
 
-### Step-by-Step Tutorials
-We have migrated our tutorials to the web to provide detailed, up-to-date instructions.
+| Platform | Installer |
+|----------|-----------|
+| Linux (Conda) | `bash installer_conda_linux.sh` |
+| Windows (WSL2) | `bash installer_conda_wsl.sh` |
 
-* **Standard Interface (Detailed Analysis)**
-    * [Tutorial: Arabidopsis Analysis](https://chronoroot.github.io/tutorials/standard/)
-    * [Tutorial: Tomato Analysis](https://chronoroot.github.io/tutorials/standard_tomato/)
-* **Screening Interface (High-Throughput)**
-    * [Tutorial: Hypocotyl Etiolation](https://chronoroot.github.io/tutorials/screening_hypocotyl/)
-    * [Tutorial: Seed Germination](https://chronoroot.github.io/tutorials/screening_germination/)
-* **AI Segmentation**
-    * [Segmentation Module Usage](https://chronoroot.github.io/tutorials/segmentation/)
-    * [Guide: Train Your Own Model](https://chronoroot.github.io/tutorials/training_on_your_images/)
-* **Infrastructure**
-    * [Docker Installation & Usage](https://chronoroot.github.io/tutorials/docker/)
+Linux and WSL installers support NVIDIA CUDA GPU acceleration for segmentation.
 
-### Demo Data
-We provide a pre-packaged dataset to help you follow along with the tutorials above.
+---
 
-* **Docker/Apptainer:** Pre-loaded at `/Demo/` inside the container.
-* **Download:** [Google Drive Link](https://drive.google.com/drive/folders/1PJCn_MMHcM9KPgz8dYe1F2Cvdt43FS3Z?usp=sharing)
+## Directory Structure
 
-## Repository Structure
-
-```text
-ChronoRoot2
-├── apptainerInstaller         # Scripts for Singularity deployment
-├── chronoRootApp              # Standard Root Phenotyping Interface
-├── chronoRootScreeningApp     # High-throughput Screening Interface
-├── segmentationApp            # AI-based segmentation tools (nnUNet)
-├── Docker                     # Dockerfile and instructions
-├── Documents                  # Legacy PDF documentation
-├── environment.yml            # Conda environment spec
-├── environment_no_nnunet.yml  # Conda environment spec without nnU-Net
-├── installer_conda_linux.sh   # Linux native installer script
-├── installer_conda_wsl.sh     # WSL native installer script
-├── logo.ico                   # ChronoRoot icon
-├── logo_screening.ico         # ChronoRoot Screening icon
-├── logo_seg.ico               # ChronoRoot Segmentation icon
-├── LICENSE                    # GNU GPL v3.0
-└── README.md                  # This file
+```
+ArabidopsisAnalysis/
+├── singlePlantAnalysis/       # Standard Root Phenotyping Interface
+├── segmentationApp/           # nnUNet Segmentation Module
+├── Documents/                 # Images and documentation assets
+├── environment.yml            # Conda environment specification
+├── installer_conda_mac.sh     # macOS installer (this guide)
+├── installer_conda_linux.sh   # Linux installer
+└── installer_conda_wsl.sh     # Windows WSL2 installer
 ```
 
-For technical details on specific modules, please refer to their internal documentation:
+---
 
-* [Standard Interface Docs](chronoRootApp/README.md) 
-* [Screening Interface Docs](chronoRootScreeningApp/README.md) 
-* [Segmentation Module Docs](segmentationApp/README.md) 
-* [Docker Guide](Docker/README.md) 
+## Troubleshooting
 
-## Hardware Specifications
+**`conda` command not found after install**
+Close and reopen your terminal, then try again. The installer adds conda to your shell profile, but it takes effect on the next session.
 
-ChronoRoot 2.0 is designed to work with an affordable custom hardware setup that includes:
+**QR code detection not working**
+Ensure `libzbar` is installed via Homebrew: `brew install zbar`. The `DYLD_LIBRARY_PATH` in the `.app` launcher points to `/opt/homebrew/lib` automatically.
 
-- Raspberry Pi 3B computer
-- Fixed-zoom cameras (RaspiCam v2)
-- Infrared LED backlighting
-- 3D-printed and laser-cut components
+**Segmentation is slow**
+Expected on macOS — nnUNet runs on CPU. For GPU-accelerated segmentation, use a Linux machine with a CUDA-capable GPU and the Linux installer.
 
-For detailed hardware specifications and assembly instructions, see the [ChronoRootModuleHardware repository](https://github.com/ThomasBlein/ChronoRootModuleHardware).
-
-For the controller software for the Raspberry Pi 3B, see the [ChronoRoot Module Controller repository](https://github.com/ThomasBlein/ChronoRootControl).
-
-## Citation
-
-If you use this platform in your research, please cite:
-
-```bibtex
-@article{gaggion2026chronoroot,
-  title={ChronoRoot 2.0: An Open AI-Powered Platform for 2D Temporal Plant Phenotyping}, 
-  author={Nicolás Gaggion and Noelia A. Boccardo and Rodrigo Bonazzola and María Florencia Legascue and María Florencia Mammarella and Florencia Sol Rodriguez and Federico Emanuel Aballay and Florencia Belén Catulo and Andana Barrios and Luciano J. Santoro and Franco Accavallo and Santiago Nahuel Villarreal and Leonardo I. Pereyra-Bistrain and Moussa Benhamed and Martin Crespi and Martiniano María Ricardi and Ezequiel Petrillo and Thomas Blein and Federico Ariel and Enzo Ferrante},
-  journal={arXiv preprint arXiv:2504.14736},
-  year={2026}
-}
-```
-
-### Contact & License
-
-ChronoRoot 2.0 is released under the [GNU General Public License v3.0](https://www.google.com/search?q=LICENSE).
-For support, please [open an issue](https://github.com/ngaggion/ChronoRoot2/issues).
+**App won't open / "damaged" warning**
+Run `xattr -cr ~/Desktop/"ChronoRoot Analysis.app"` (or the Segmentation app) in the terminal to clear the quarantine flag, then try opening again.

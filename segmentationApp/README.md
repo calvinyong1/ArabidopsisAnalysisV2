@@ -58,7 +58,7 @@ To keep the repository lightweight and ensure version control efficiency, **mode
 
 ### Automatic Installation
 
-If you used the main ChronoRoot installer (Apptainer, WSL, or Local), the weights were likely downloaded automatically during setup.
+If you used the Conda Installer provided, the model weights should automatically be downloaded when the installer script it ran
 
 ### Manual Installation / Updating
 
@@ -100,7 +100,7 @@ python run.py
    * **Hide Empty Folders:** Check this to filter out folders that contain no images.
    * **Conda:** Enter the name of your Conda environment if you have a different local installation (default: `ChronoRoot`).
 
-3. **Load Robot:** Click **"Load Robot"** and select one or more root folders containing your experiment data (e.g., `/path/to/Robot_1/`).
+3. **Load Experiment:** Click **"Load Experiment"** and select one or more root folders containing your experiment data. This is the main experiment directory (The one that has all the plate subdirectories in it)(e.g., `/path/to/Experiment_1/`).
 4. **Monitor & Process:**
    * **Tooltips:** Hover over any button in the interface to see a detailed explanation of its function.
    * **Context-Aware Actions:** The "Actions" column updates dynamically based on the folder's status:

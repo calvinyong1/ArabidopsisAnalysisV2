@@ -220,18 +220,18 @@ class nnUNetMonitorUI(QMainWindow):
         # --- Header ---
         header_layout = QHBoxLayout()
         
-        self.load_button = QPushButton("Load Robot")
-        self.load_button.setToolTip("Select and load one or more robot folders to monitor")
+        self.load_button = QPushButton("Load Experiment")
+        self.load_button.setToolTip("Select and load one or more experiment folders to monitor")
         self.load_button.clicked.connect(self.load_robot)
         self.load_button.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; padding: 6px; font-weight: bold; }")
         
         # New: Remove Robot Button
-        self.remove_robot_button = QPushButton("Remove Robot")
-        self.remove_robot_button.setToolTip("Unload the currently filtered robot from the view") 
+        self.remove_robot_button = QPushButton("Remove Experiment")
+        self.remove_robot_button.setToolTip("Unload the currently filtered experiment from the view") 
         self.remove_robot_button.clicked.connect(self.remove_robot)
         self.remove_robot_button.setStyleSheet("QPushButton { background-color: #607D8B; color: white; padding: 6px;}")
 
-        self.robot_count_label = QLabel("Robots: 0")
+        self.robot_count_label = QLabel("Experiments: 0")
         self.queue_info_label = QLabel("Queue: 0 | Processing: None")
         
         self.alpha_button = QPushButton(f"Alpha: {self.alpha_parameter}")
@@ -287,7 +287,7 @@ class nnUNetMonitorUI(QMainWindow):
                                     "Complete", "Different Alpha", "Different Model", "Error"])
         self.status_filter.currentTextChanged.connect(self.update_table)
         
-        filter_layout.addWidget(QLabel("Filter Robot:"))
+        filter_layout.addWidget(QLabel("Filter Experiment:"))
         filter_layout.addWidget(self.robot_filter)
         filter_layout.addWidget(QLabel("Filter Status:"))
         filter_layout.addWidget(self.status_filter)
@@ -299,7 +299,7 @@ class nnUNetMonitorUI(QMainWindow):
         self.table.setColumnCount(10) 
         # Updated Headers to match new logic
         self.table.setHorizontalHeaderLabels([
-            "Robot", "Folder Name", "Images", "Segmentation %", 
+            "Experiment", "Folder Name", "Images", "Segmentation %", 
             "Postprocessing %", "Model - Alpha", "Status", "Actions", 
             "Remove View", "Clear Results"
         ])
@@ -549,7 +549,7 @@ class nnUNetMonitorUI(QMainWindow):
             status_filter = self.status_filter.currentText()
             
             for key, data in self.folder_data.items():
-                if robot_filter != "All Robots" and data['robot'] != robot_filter:
+                if robot_filter != "All Experiments" and data['robot'] != robot_filter:
                     continue
                 
                 s = data['status']
