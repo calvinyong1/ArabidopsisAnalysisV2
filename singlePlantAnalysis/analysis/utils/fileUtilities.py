@@ -54,9 +54,19 @@ def createSaveFolder(conf):
     id_path = os.path.join(analysis, identifier)
     os.makedirs(id_path, exist_ok=True)
 
+    # Create the folder for the rpi
+    rpi = str(conf['rpi'])
+    rpi_path = os.path.join(id_path, rpi)
+    os.makedirs(rpi_path, exist_ok=True)
+    
+    # Create the folder for the cam
+    cam = "cam_" + str(str(conf['cam']))
+    cam_path = os.path.join(rpi_path, cam)
+    os.makedirs(cam_path, exist_ok=True)
+    
     # Create the folder for the plant
     plant = "plant_" + str(str(conf['plant']))
-    plant_path = os.path.join(id_path, plant)
+    plant_path = os.path.join(cam_path, plant)
     os.makedirs(plant_path, exist_ok=True)
     
     # Create the folder for the results
