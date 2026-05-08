@@ -1,9 +1,3 @@
-# ChronoRoot 2.0
-
-ChronoRoot 2.0 is an automated pipeline for plant root phenotyping from time-lapse infrared images. It combines AI-powered segmentation (nnUNet) with graph-based root architecture analysis across two analysis interfaces.
-
-![System Overview](Documents/images/mainFigure.png)
-
 ## Applications
 
 | App | Description |
