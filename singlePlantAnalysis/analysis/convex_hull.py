@@ -38,7 +38,7 @@ def calculate_atlas_geometry(experiment_paths: List[str]) -> Tuple[Tuple[int, in
 
     for exp_path in experiment_paths:
         # Load all results folders
-        result_paths = utils.load_paths(exp_path, '*/*/Results*')
+        result_paths = utils.load_paths(exp_path, '*/Results*')
         
         for r_path in result_paths:            
             # 1. Load Last Segmentation Image
@@ -129,7 +129,7 @@ def generate_root_atlases(save_path, days, timestep, canvas_shape, center_coords
     exp_dir_name = os.path.basename(save_path)
     
     real_exp_name = convertFromPathSafe(exp_dir_name)
-    sample_meta = utils.load_paths(save_path, '*/*/Results*/metadata.json')
+    sample_meta = utils.load_paths(save_path, '*/metadata.json')
     if sample_meta:
         try:
             with open(sample_meta[0], 'r') as f:

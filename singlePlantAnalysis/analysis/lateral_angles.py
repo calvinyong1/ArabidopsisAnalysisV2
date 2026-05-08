@@ -596,50 +596,48 @@ def makeLateralAnglesPlots(conf):
     all_data = pd.DataFrame()
         
     for exp in experiments:
-        cameras = loadPath(exp, '*')
+        plants = loadPath(exp, '*')
         # Use basename to get the literal folder name for logic
         raw_exp_folder = os.path.basename(exp)
-
+        
         # Determine the name for the 'Experiment' column (the display name)
         # We check the first plant's metadata for the preferred name
         display_name = convertFromPathSafe(raw_exp_folder)
+        
+        print('Experiment:', display_name, '- Total plants', len(plants))
 
-        all_plants = [p for cam in cameras for p in loadPath(cam, '*')]
-        print('Experiment:', display_name, '- Total plants', len(all_plants))
+        for plant in plants:
+            results = loadPath(plant, '*')
+            if len(results) == 0:
+                continue
+            else:
+                results = results[-1]
 
-        for camera in cameras:
-            for plant in loadPath(camera, '*'):
-                results = loadPath(plant, '*')
-                if len(results) == 0:
-                    continue
-                else:
-                    results = results[-1]
+            plant_name = plant.replace(exp, '').replace('/', '_')
 
-                plant_name = os.path.basename(camera) + '_' + os.path.basename(plant)
+            file = os.path.join(results, 'LateralRootsData.csv')
+            file2 = os.path.join(results, 'PostProcess_Original.csv')
 
-                file = os.path.join(results, 'LateralRootsData.csv')
-                file2 = os.path.join(results, 'PostProcess_Original.csv')
+            if not os.path.exists(file) or not os.path.exists(file2):
+                continue
 
-                if not os.path.exists(file) or not os.path.exists(file2):
-                    continue
+            data2 = pd.read_csv(file2)
+            data2.dropna(inplace=True)
+            
+            date1 = pd.to_datetime(data2.loc[0, "Date"], dayfirst=False)
+            date2 = pd.to_datetime(data2.iloc[-1]["Date"], dayfirst=False)
+                        
+            data = pd.read_csv(file)
+            data = dataWork(data, date1, date2)
 
-                data2 = pd.read_csv(file2)
-                data2.dropna(inplace=True)
+            if data.empty:
+                continue
 
-                date1 = pd.to_datetime(data2.loc[0, "Date"], dayfirst=False)
-                date2 = pd.to_datetime(data2.iloc[-1]["Date"], dayfirst=False)
+            data['Plant_id'] = display_name + plant_name
+            # Assigning the unified name to ensure DataFrame groups correctly
+            data['Experiment'] = display_name 
 
-                data = pd.read_csv(file)
-                data = dataWork(data, date1, date2)
-
-                if data.empty:
-                    continue
-
-                data['Plant_id'] = display_name + plant_name
-                # Assigning the unified name to ensure DataFrame groups correctly
-                data['Experiment'] = display_name
-
-                all_data = pd.concat([all_data, data], ignore_index=True)
+            all_data = pd.concat([all_data, data], ignore_index=True)
 
     all_data.to_csv(os.path.join(report_path, 'LateralRootsData.csv'), index=False)
     # Filter data for specified analysis days

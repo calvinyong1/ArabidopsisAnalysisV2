@@ -40,28 +40,23 @@ if __name__ == "__main__":
     
     # --- Cleanup Phase ---
     for exp_dir in [p for p in experiment_dirs if os.path.isdir(p)]:
-        cameras = [p for p in load_path(exp_dir, '*') if os.path.isdir(p)]
-        for camera in cameras:
-            plants = [p for p in load_path(camera, '*') if os.path.isdir(p)]
-            for plant in plants:
-                results = load_path(plant, '*')
-                if len(results) == 0:
-                    os.rmdir(plant)
+        plants = [p for p in load_path(exp_dir, '*') if os.path.isdir(p)]
+        for plant in plants:
+            results = load_path(plant, '*')
+            if len(results) == 0:
+                os.rmdir(plant)
 
     # --- Processing Phase ---
     for exp_dir in [p for p in experiment_dirs if os.path.isdir(p)]:
         print(f'Processing Experiment: {convertFromPathSafe(os.path.basename(exp_dir))}')
 
-        cameras = [p for p in load_path(exp_dir, '*') if os.path.isdir(p)]
+        plants = [p for p in load_path(exp_dir, '*') if os.path.isdir(p)]
 
-        if len(cameras) == 0:
+        if len(plants) == 0:
             continue
 
-        # Use first plant of first camera to establish calibration/metadata for the group
-        sample_plants = [p for p in load_path(cameras[0], '*') if os.path.isdir(p)]
-        if len(sample_plants) == 0:
-            continue
-        sample_results = [p for p in load_path(sample_plants[0], '*') if os.path.isdir(p)]
+        # Use first plant to establish calibration/metadata for the group
+        sample_results = [p for p in load_path(plants[0], '*') if os.path.isdir(p)]
         if len(sample_results) == 0:
             continue
 
@@ -92,41 +87,40 @@ if __name__ == "__main__":
                         break
 
         # 3. Process Individual Plants
-        for camera in cameras:
-            for plant in [p for p in load_path(camera, '*') if os.path.isdir(p)]:
-                plant_results = [p for p in load_path(plant, '*') if os.path.isdir(p)]
-                if len(plant_results) == 0:
-                    continue
+        for plant in plants:
+            plant_results = [p for p in load_path(plant, '*') if os.path.isdir(p)]
+            if len(plant_results) == 0:
+                continue
 
-                target_res = plant_results[-1]
-                meta_file = os.path.join(target_res, 'metadata.json')
+            target_res = plant_results[-1]
+            meta_file = os.path.join(target_res, 'metadata.json')
 
-                with open(meta_file, 'r') as f:
-                    plant_metadata = json.load(f)
+            with open(meta_file, 'r') as f:
+                plant_metadata = json.load(f)
 
-                # Update metadata with calculated pixel size
-                plant_metadata['pixel_size'] = pixel_size
-                with open(meta_file, 'w') as f:
-                    json.dump(plant_metadata, f)
+            # Update metadata with calculated pixel size
+            plant_metadata['pixel_size'] = pixel_size
+            with open(meta_file, 'w') as f:
+                json.dump(plant_metadata, f)
 
-                # Run analysis
-                n_limit = conf['Limit'] if conf['Limit'] != 0 else None
-                pfile = os.path.join(target_res, 'Results_raw.csv')
+            # Run analysis
+            n_limit = conf['Limit'] if conf['Limit'] != 0 else None
+            pfile = os.path.join(target_res, 'Results_raw.csv')
 
-                try:
-                    dataWork(conf, pfile, target_res, N_exp=n_limit)
-                except Exception as e:
-                    print(f"Error processing {pfile}, experiment may have not finished yet. Error: {e}")
-                    continue
+            try:
+                dataWork(conf, pfile, target_res, N_exp=n_limit)
+            except Exception as e:
+                print(f"Error processing {pfile}, experiment may have not finished yet. Error: {e}")
+                continue
 
-                # 4. Generate Plot Name with path components
-                plot_label = f"{os.path.basename(exp_dir)}_{os.path.basename(camera)}_{os.path.basename(plant)}"
+            # 4. Generate Plot Name with path components
+            plot_label = f"{os.path.basename(exp_dir)}_{os.path.basename(plant)}"
 
-                processed_csv = os.path.join(target_res, 'PostProcess_Hour.csv')
-                if os.path.exists(processed_csv):
-                    data = pd.read_csv(processed_csv)
-                    plot_individual_plant(target_res, data, plot_label)
+            processed_csv = os.path.join(target_res, 'PostProcess_Hour.csv')
+            if os.path.exists(processed_csv):
+                data = pd.read_csv(processed_csv)
+                plot_individual_plant(target_res, data, plot_label)
 
-                getAngles(conf, target_res)
+            getAngles(conf, target_res)
                     
     print('Post processing finished.')

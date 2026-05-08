@@ -89,12 +89,12 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
 
         # map values for compatibility with 1_analysis.py
         # rpi_val = self.rpiField.text().strip() or "1"
-        cam_val = self.cameraField.text().strip() or "1"
+        # cam_val = self.cameraField.text().strip() or "1"
         plant_val = self.plantField.text().strip() or "1"
         # data["rpi"] = rpi_val
         # data["rpiField"] = rpi_val
-        data["cam"] = cam_val
-        data["cameraField"] = cam_val
+        # data["cam"] = cam_val
+        # data["cameraField"] = cam_val
         data["plant"] = plant_val
         data["plantField"] = plant_val
         data["experimentName"] = data["experimentName"].strip() or "1"
@@ -147,7 +147,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         try:
             with open(json_path, 'r') as f:
                 data = json.load(f)
-                for field in [self.cameraField, self.plantField, self.processingLimitField,
+                for field in [self.plantField, self.processingLimitField,
                       self.processingLimitField_3, self.emergenceDistanceField, self.captureIntervalField,
                       self.everyXhourField, self.everyXhourFieldFourier, self.everyXhourFieldAngles, self.numComponentsFPCAField]:
                     if field.objectName() in data:
@@ -187,7 +187,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         AnalysisFolder = os.path.join(self.projectField.text(), "Analysis")
         pathlib_dir = pathlib.Path(AnalysisFolder)
 
-        data_files = pathlib_dir.glob('*/*/*/*')
+        data_files = pathlib_dir.glob('*/*/*')
         data_files = [str(file) for file in data_files]
         data_files = sorted(data_files, key=lambda x: natural_keys(x))
 
@@ -199,9 +199,8 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
             rel_path = os.path.relpath(file, AnalysisFolder)
             split = rel_path.split(os.path.sep)
             experiment = convertFromPathSafe(split[0])
-            camera = split[1]
-            plant = split[2]
-            results = split[3]
+            plant = split[1]
+            results = split[2]
 
             # read the error rate from the log file first line
             if os.path.exists(os.path.join(file, "log.txt")):
@@ -219,7 +218,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
                 error_rate = ""
                 status = "Not finished"
 
-            data.append([experiment, camera, plant, results, error_rate, status, date, file])
+            data.append([experiment, plant, results, error_rate, status, date, file])
 
             self.plant_dropdown.addItem(file)
 
@@ -440,7 +439,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         self.captureIntervalField_3.editingFinished.connect(
             lambda: self.validate_numeric_input(self.captureIntervalField_3))
 
-        for field in [self.cameraField, self.plantField, self.experimentName]:
+        for field in [self.plantField, self.experimentName]:
             field.editingFinished.connect(lambda f=field: f.setText(f.text().strip() or "1"))
 
     def get_image_paths(self):
@@ -451,11 +450,10 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         bbox = metadata["bounding box"]
         overlayPath = metadata["folders"]["images"] + "/SegMulti/"
         
-        experiment = self.selected_plant.split(os.path.sep)[-4]
-        camera = self.selected_plant.split(os.path.sep)[-3]
+        experiment = self.selected_plant.split(os.path.sep)[-3]
         plant = self.selected_plant.split(os.path.sep)[-2]
 
-        filename = experiment + "_" + camera + "_" + plant + ".png"
+        filename = experiment + "_" + plant + ".png"
         image2_path = os.path.join(self.selected_plant, filename)
         
         if not os.path.exists(image2_path):
@@ -803,7 +801,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         with open(json_path, 'r') as file:
             data = json.load(file)
 
-        for field in [self.cameraField, self.plantField, self.processingLimitField,
+        for field in [self.plantField, self.processingLimitField,
                       self.processingLimitField_3, self.emergenceDistanceField, self.captureIntervalField,
                       self.everyXhourField, self.everyXhourFieldFourier, self.everyXhourFieldAngles, self.numComponentsFPCAField]:
             if field.objectName() in data:
@@ -854,9 +852,9 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         # self.rpiField.setGeometry(QtCore.QRect(190, 150, 51, 31))
         # self.rpiField.setObjectName("rpiField")
 
-        self.cameraField = QtWidgets.QLineEdit(self.tab1)
-        self.cameraField.setGeometry(QtCore.QRect(190, 200, 51, 31))
-        self.cameraField.setObjectName("cameraField")
+        # self.cameraField = QtWidgets.QLineEdit(self.tab1)
+        # self.cameraField.setGeometry(QtCore.QRect(190, 200, 51, 31))
+        # self.cameraField.setObjectName("cameraField")
 
         self.plantField = QtWidgets.QLineEdit(self.tab1)
         self.plantField.setGeometry(QtCore.QRect(190, 250, 51, 31))
@@ -926,9 +924,9 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         self.loadLastConfigButton.setObjectName("loadLastConfigButton")
         self.loadLastConfigButton.clicked.connect(self.loadJsonIntoFields)
 
-        # self.label = QtWidgets.QLabel(self.tab1)
-        # self.label.setGeometry(QtCore.QRect(10, 150, 161, 31))
-        # self.label.setObjectName("label")
+        self.label = QtWidgets.QLabel(self.tab1)
+        self.label.setGeometry(QtCore.QRect(10, 150, 161, 31))
+        self.label.setObjectName("label")
         self.label_2 = QtWidgets.QLabel(self.tab1)
         self.label_2.setGeometry(QtCore.QRect(10, 200, 161, 31))
         self.label_2.setObjectName("label_2")
@@ -1055,8 +1053,8 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
     def setup_tab2_elements(self):
         # Create the table
         self.table = QTableWidget()
-        self.table.setColumnCount(7)
-        self.table.setHorizontalHeaderLabels(["Experiment", "Camera", "Plant Number", "Result ID",
+        self.table.setColumnCount(6)
+        self.table.setHorizontalHeaderLabels(["Experiment", "Plant Number", "Result ID",
                                               "Error Rate", "Status", "Finish Date"])
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -1556,7 +1554,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
             set_translation(self.saveButton, "Save")
 
         def translate_labels():
-            # set_translation(self.label, "<html><head/><body><p align=\"center\">Raspberry Module</p></body></html>")
+            set_translation(self.label, "<html><head/><body><p align=\"center\">Raspberry Module</p></body></html>")
             set_translation(self.label_2, "<html><head/><body><p align=\"center\">Camera</p></body></html>")
             set_translation(self.label_3, "<html><head/><body><p align=\"center\">Plant Number</p></body></html>")
             set_translation(self.label_4, "<html><head/><body><p align=\"center\">Identifier</p></body></html>")
