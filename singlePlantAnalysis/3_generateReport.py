@@ -73,7 +73,7 @@ if __name__ == "__main__":
             exp_dir_name = os.path.basename(exp_dir)
             real_exp_name = convertFromPathSafe(exp_dir_name) # Default fallback
             
-            first_meta = utils.load_paths(exp_dir, '*/*/*/metadata.json')
+            first_meta = utils.load_paths(exp_dir, '*/metadata.json')
             if first_meta:
                 try:
                     with open(first_meta[0], 'r') as f:
@@ -87,44 +87,38 @@ if __name__ == "__main__":
             iplots_exp_folder = os.path.join(individual_plots_folder, exp_dir_name)
             utils.ensure_directory(iplots_exp_folder)
 
-            rpi_paths = utils.load_paths(exp_dir, '*')
-            for rpi in rpi_paths:
-                rpi_name = os.path.basename(rpi)
-                cam_paths = utils.load_paths(rpi, '*')
-                for cam in cam_paths:
-                    cam_name = os.path.basename(cam)
-                    plant_paths = utils.load_paths(cam, '*')
-                    for plant in plant_paths:
-                        plant_name = os.path.basename(plant)
-                        results = utils.load_paths(plant, '*')
-                        
-                        if len(results) == 0:
-                            continue
-                        res_folder = results[-1]
-                        
-                        plant_id = f"{rpi_name}_{cam_name}_{plant_name}"
-                        file_csv = os.path.join(res_folder, 'PostProcess_Hour.csv')
-                        
-                        if not os.path.exists(file_csv): 
-                            continue
-                        
-                        data = pd.read_csv(file_csv)
-                        data['Plant_id'] = plant_id
-                        data['Experiment'] = real_exp_name 
+            plant_paths = utils.load_paths(exp_dir, '*')
+            for plant in plant_paths:
+                plant_name = os.path.basename(plant)
+                results = utils.load_paths(plant, '*')
 
-                        all_data = pd.concat([all_data, data], ignore_index=True)
-                        
-                        # Handle individual plots
-                        plot_filename = f"{exp_dir_name}_{plant_id}.png"
-                        iplot_cache = os.path.join(res_folder, plot_filename)
-                        report_dest = os.path.join(iplots_exp_folder, plot_filename)
+                if len(results) == 0:
+                    continue
+                res_folder = results[-1]
 
-                        if not os.path.exists(iplot_cache):
-                            plot_individual_plant(iplots_exp_folder, data, plot_filename)
-                            if os.path.exists(report_dest):
-                                shutil.copy(report_dest, iplot_cache)
-                        else:
-                            shutil.copy(iplot_cache, report_dest)
+                plant_id = plant_name
+                file_csv = os.path.join(res_folder, 'PostProcess_Hour.csv')
+
+                if not os.path.exists(file_csv):
+                    continue
+
+                data = pd.read_csv(file_csv)
+                data['Plant_id'] = plant_id
+                data['Experiment'] = real_exp_name
+
+                all_data = pd.concat([all_data, data], ignore_index=True)
+
+                # Handle individual plots
+                plot_filename = f"{exp_dir_name}_{plant_id}.png"
+                iplot_cache = os.path.join(res_folder, plot_filename)
+                report_dest = os.path.join(iplots_exp_folder, plot_filename)
+
+                if not os.path.exists(iplot_cache):
+                    plot_individual_plant(iplots_exp_folder, data, plot_filename)
+                    if os.path.exists(report_dest):
+                        shutil.copy(report_dest, iplot_cache)
+                else:
+                    shutil.copy(iplot_cache, report_dest)
 
             # --- 3. Convex Hull Analysis per Experiment ---
             if conf['doConvex']:
