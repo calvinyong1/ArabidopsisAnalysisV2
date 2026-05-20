@@ -278,7 +278,7 @@ class nnUNetMonitorUI(QMainWindow):
         # --- Filters ---
         filter_layout = QHBoxLayout()
         self.robot_filter = QComboBox()
-        self.robot_filter.addItem("All Robots")
+        self.robot_filter.addItem("All Experiments")
         self.robot_filter.currentTextChanged.connect(self.update_table)
         
         self.status_filter = QComboBox()
@@ -363,7 +363,8 @@ class nnUNetMonitorUI(QMainWindow):
         # Fallback to file count
         if data['total_images'] == 0:
             pngs = glob.glob(os.path.join(folder_path, '*.png'))
-            data['total_images'] = len(pngs)
+            tifs = glob.glob(os.path.join(folder_path, '*.tif')) + glob.glob(os.path.join(folder_path, '*.tiff'))
+            data['total_images'] = len(pngs) + len(tifs)
 
         if data['total_images'] == 0:
             data['status'] = 'No Images'
@@ -516,11 +517,21 @@ class nnUNetMonitorUI(QMainWindow):
             # --- Legacy Fallback Logic ---
             # Check for Fold_0 (Segmentation)
             fold0_path = os.path.join(folder_path, "Segmentation", "Fold_0")
-            seg_count = len(glob.glob(os.path.join(fold0_path, "*.png"))) if os.path.exists(fold0_path) else 0
-            
+            if os.path.exists(fold0_path):
+                seg_count = (len(glob.glob(os.path.join(fold0_path, "*.png"))) +
+                             len(glob.glob(os.path.join(fold0_path, "*.tif"))) +
+                             len(glob.glob(os.path.join(fold0_path, "*.tiff"))))
+            else:
+                seg_count = 0
+
             # Check for Ensemble (Postprocessing)
             ensemble_path = os.path.join(folder_path, "Segmentation", "Ensemble")
-            post_count = len(glob.glob(os.path.join(ensemble_path, "*.png"))) if os.path.exists(ensemble_path) else 0
+            if os.path.exists(ensemble_path):
+                post_count = (len(glob.glob(os.path.join(ensemble_path, "*.png"))) +
+                              len(glob.glob(os.path.join(ensemble_path, "*.tif"))) +
+                              len(glob.glob(os.path.join(ensemble_path, "*.tiff"))))
+            else:
+                post_count = 0
             
             # Legacy Status Determination
             if post_count >= data['total_images']:
@@ -878,7 +889,7 @@ class nnUNetMonitorUI(QMainWindow):
     def remove_robot(self):
         """Removes the currently selected robot from the UI."""
         target_robot = self.robot_filter.currentText()
-        if target_robot == "All Robots":
+        if target_robot == "All Experiments":
             QMessageBox.warning(self, "Selection Error", "Please select a specific robot using the filter to remove it from the view.")
             return
 
@@ -1055,7 +1066,7 @@ class nnUNetMonitorUI(QMainWindow):
     def update_robot_filter(self):
         curr = self.robot_filter.currentText()
         self.robot_filter.clear()
-        self.robot_filter.addItem("All Robots")
+        self.robot_filter.addItem("All Experiments")
         self.robot_filter.addItems(list(self.robots.keys()))
         self.robot_filter.setCurrentText(curr)
         self.robot_count_label.setText(f"Robots: {len(self.robots)}")
