@@ -29,9 +29,9 @@ def saveGraph(graph, conf, image_name):
                and edge attributes (weight, color, root_type)
                Can also be False/None for failed frames
         conf: Configuration dictionary with output folders
-        image_name: Name of the image file (will replace .png with .xml.gz)
+        image_name: Name of the image file (extension replaced with .xml.gz)
     """
-    save_filename = image_name.replace('.png', '.xml.gz')
+    save_filename = os.path.splitext(image_name)[0] + '.xml.gz'
     save_path = os.path.join(conf['folders']['graphs'], save_filename)
     
     if graph is not False and graph is not None:

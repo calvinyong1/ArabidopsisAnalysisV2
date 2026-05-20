@@ -323,7 +323,7 @@ def getAngles(conf, path):
     # Use basename to match files, avoiding issues with special characters in 'path'
     paths = []
     for image in images:
-        rsml_name = os.path.basename(image).replace('.png', '.rsml')
+        rsml_name = os.path.splitext(os.path.basename(image))[0] + '.rsml'
         if rsml_name in rsml_files:
             paths.append(os.path.join(rsml_dir, rsml_name))
 
@@ -1078,8 +1078,8 @@ def plotLateralAnglesOnTop(conf):
                         rsml_files = os.listdir(os.path.join(results_path, "RSML"))
 
                         # Filter to images with corresponding RSML
-                        images = [image for image in images 
-                                 if image.split('/')[-1].replace('.png', '.rsml') in rsml_files]
+                        images = [image for image in images
+                                 if os.path.splitext(image.split('/')[-1])[0] + '.rsml' in rsml_files]
                         
                         try:
                             images = [os.path.join(metadata["ImagePath"], image) for image in images]

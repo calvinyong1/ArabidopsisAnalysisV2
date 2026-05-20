@@ -20,7 +20,7 @@ from analysis.dataWork import dataWork
 from analysis.qr import qr_detect, get_pixel_size, load_path
 from analysis.report import plot_individual_plant
 from analysis.lateral_angles import getAngles
-from analysis.utils.fileUtilities import convertFromPathSafe
+from analysis.utils.fileUtilities import convertFromPathSafe, loadImageFiles
 import json
 import os 
 import pandas as pd
@@ -86,7 +86,7 @@ if __name__ == "__main__":
                         pixel_size = float(conf['knownDistance']) / float(conf['pixelDistance'])
                     else:
                         image_path = metadata['ImagePath']
-                        images = load_path(image_path, '*.png')
+                        images = loadImageFiles(image_path)
                         pixel_size = 0.04 # Default
                         for i, image in enumerate(images[:20]):
                             qr = qr_detect(image)

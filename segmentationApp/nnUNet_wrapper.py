@@ -138,7 +138,8 @@ class nnUNetv2:
         
         png_files = sorted(list(input_path.glob('*.png')))
         if not png_files:
-            raise ValueError(f"No PNG files found in {input_path}")
+            png_files = sorted(list(input_path.glob('*.tif')))
+            # raise ValueError(f"No PNG files found in {input_path}")
         
         total_files = len(png_files)
         print(f"Found {total_files} images in: {input_path}")

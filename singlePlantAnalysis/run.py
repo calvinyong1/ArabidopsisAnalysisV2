@@ -584,16 +584,20 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.warning(None, 'Error', 'Video folder does not exist!\nPlease check the path.')
             return
         
-        # Check for PNG images
-        images = glob.glob(os.path.join(video_folder, "*.png"))
-        
+        # Check for images (PNG/TIF/TIFF)
+        _img_exts = ("*.png", "*.tif", "*.tiff")
+        images = []
+        for _ext in _img_exts:
+            images.extend(glob.glob(os.path.join(video_folder, _ext)))
+
         # Check if there is no images, then look for a file called "segmentation_metadata.json"
         if not images:
             metadata_path = os.path.join(video_folder, 'Segmentation', 'segmentation_metadata.json')
             if os.path.exists(metadata_path):
                 with open(metadata_path, 'r') as f:
                     metadata = json.load(f)
-                images = glob.glob(os.path.join(metadata["input_path"], "*.png")) 
+                for _ext in _img_exts:
+                    images.extend(glob.glob(os.path.join(metadata["input_path"], _ext)))
                 
         if not images:
             QtWidgets.QMessageBox.warning(

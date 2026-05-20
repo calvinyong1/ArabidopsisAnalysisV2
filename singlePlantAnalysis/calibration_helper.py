@@ -25,8 +25,10 @@ def getImages(video_dir: str) -> Tuple[List[str], List[str]]:
     """
     Returns lists of image paths and segmentation paths
     """
-    # Check if the directory exists and contains png files
-    images = loadPath(video_dir, ext="*.png")
+    # Check if the directory exists and contains image files (PNG/TIF/TIFF)
+    images = []
+    for _ext in ("*.png", "*.tif", "*.tiff"):
+        images.extend(loadPath(video_dir, ext=_ext))
     
     # Look for segmentation files
     seg_path = os.path.join(video_dir, 'Segmentation', 'Ensemble')

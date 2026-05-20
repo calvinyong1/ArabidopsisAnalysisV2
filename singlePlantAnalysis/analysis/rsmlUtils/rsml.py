@@ -367,7 +367,7 @@ def createHeader(conf, i, images):
                 if sub.tag == 'captured':
                     # Simplified regex for robustness
                     try:
-                        time_str = os.path.basename(images[i]).replace('.png','')
+                        time_str = os.path.splitext(os.path.basename(images[i]))[0]
                         nums = re.findall(r'\d+', time_str)
                         if len(nums) >= 6:
                             text = f"{nums[0]}-{nums[1]}-{nums[2]}T{nums[3]}:{nums[4]}:{nums[5]}"
@@ -391,6 +391,6 @@ def createHeader(conf, i, images):
     return tree
 
 def saveRSML(rsmlTree, conf, image_name):
-    path = os.path.join(conf['folders']['rsml'], image_name.replace('.png','.rsml'))
+    path = os.path.join(conf['folders']['rsml'], os.path.splitext(image_name)[0] + '.rsml')
     rsmlTree.write(open(path, 'w'), encoding='unicode')
     return

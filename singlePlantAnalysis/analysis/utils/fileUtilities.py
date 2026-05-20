@@ -24,12 +24,24 @@ def natural_key(string_):
     """See http://www.codinghorror.com/blog/archives/001018.html"""
     return [int(s) if s.isdigit() else s for s in re.split(r'(\d+)', string_)]
 
+_IMAGE_EXTS = ("*.png", "*.tif", "*.tiff")
+
 def loadPath(search_path, ext = '*.*'):
     data_root = pathlib.Path(search_path)
     all_files = list(data_root.glob(ext))
     all_files = [str(path) for path in all_files]
     all_files.sort(key = natural_key)
-    
+
+    return all_files
+
+def loadImageFiles(search_path):
+    """Load all image files (PNG/TIF/TIFF) from a directory, sorted naturally."""
+    data_root = pathlib.Path(search_path)
+    all_files = []
+    for ext in _IMAGE_EXTS:
+        all_files.extend(data_root.glob(ext))
+    all_files = [str(p) for p in all_files]
+    all_files.sort(key=natural_key)
     return all_files
 
 def convertToPathSafe(name):
@@ -102,29 +114,28 @@ def createSaveFolder(conf):
     return paths
 
 def getImages(conf):
-    # Get the list of images    
-    images = loadPath(conf['Images'], ext = "*.png") 
+    # Get the list of images
+    images = loadImageFiles(conf['Images'])
 
     conf['ImagePath'] = conf['Images']
-                
+
     # Check if there is no images, then look for a file called "segmentation_metadata.json"
     if len(images) == 0:
         metadata_path = os.path.join(conf['Images'], 'Segmentation', 'segmentation_metadata.json')
-        #print("No images found in the specified folder. Looking for segmentation metadata file at: ", metadata_path)
         if os.path.exists(metadata_path):
             with open(metadata_path, 'r') as f:
                 metadata = json.load(f)
             images_path = metadata.get('input_path', None)
             if images_path and os.path.exists(images_path):
-                images = loadPath(images_path, ext="*.png")
+                images = loadImageFiles(images_path)
                 conf['ImagePath'] = images_path
-    
+
     # Get the list of segmentation images
     SegPath = os.path.join(conf['Images'], 'Segmentation', 'Ensemble')
     if not os.path.exists(SegPath):
         SegPath = os.path.join(conf['Images'], 'Seg')
-    
-    segFiles = loadPath(SegPath, ext = "*.png") 
+
+    segFiles = loadPath(SegPath, ext = "*.png")
 
     # Save configuration
     

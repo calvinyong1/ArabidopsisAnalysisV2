@@ -10,8 +10,17 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QColor
 
 # --- UTILS ---
+_IMAGE_EXTS = ("*.png", "*.tif", "*.tiff")
+
 def loadPath(path, ext="*.png"):
     return sorted(glob.glob(os.path.join(path, ext)))
+
+def loadImagePath(path):
+    """Load all image files (PNG/TIF/TIFF) from a directory."""
+    files = []
+    for ext in _IMAGE_EXTS:
+        files.extend(glob.glob(os.path.join(path, ext)))
+    return sorted(files)
 
 def load_plant_data(plant_path):
     """
@@ -30,13 +39,13 @@ def load_plant_data(plant_path):
     imagePath = conf.get('ImagePath')
     segPath = os.path.join(plant_path, "Images", "SegMulti")
     
-    images = loadPath(imagePath, ext="*.png") if imagePath and os.path.exists(imagePath) else []
+    images = loadImagePath(imagePath) if imagePath and os.path.exists(imagePath) else []
     segs = loadPath(segPath, ext="*.png")
 
     if not images:
-        local_img_path = os.path.join(plant_path, "Images") 
+        local_img_path = os.path.join(plant_path, "Images")
         if os.path.exists(local_img_path):
-             images = loadPath(local_img_path, ext="*.png")
+            images = loadImagePath(local_img_path)
 
     if not images:
         raise FileNotFoundError(f"No images found. Checked: {imagePath}")
