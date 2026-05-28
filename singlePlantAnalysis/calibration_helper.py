@@ -35,7 +35,10 @@ def getImages(video_dir: str) -> Tuple[List[str], List[str]]:
     if not os.path.exists(seg_path):
         seg_path = os.path.join(video_dir, 'Seg')
     
-    seg_files = loadPath(seg_path, ext="*.png")
+    seg_files = []
+    for _ext in ("*.png", "*.tif", "*.tiff"):
+        seg_files.extend(loadPath(seg_path, ext=_ext))
+    seg_files.sort()
     
     # Ensure we have matching numbers of files
     n = min(len(images), len(seg_files))

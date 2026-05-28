@@ -135,7 +135,7 @@ def getImages(conf):
     if not os.path.exists(SegPath):
         SegPath = os.path.join(conf['Images'], 'Seg')
 
-    segFiles = loadPath(SegPath, ext = "*.png")
+    segFiles = loadImageFiles(SegPath)
 
     # Save configuration
     

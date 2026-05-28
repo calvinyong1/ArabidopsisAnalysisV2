@@ -53,7 +53,7 @@ def get_conda_python(env_name):
                         return str(python_bin)
     except Exception:
         pass
-    return "python"
+    return sys.executable
 
 class CLIWorker(QThread):
     """Unified worker that runs the CLI backend"""
@@ -993,8 +993,11 @@ class nnUNetMonitorUI(QMainWindow):
 
         # Check legacy segmentation folder
         fold0_path = os.path.join(folder_path, "Segmentation", "Fold_0")
-        pngs = glob.glob(os.path.join(fold0_path, "*.png")) if os.path.exists(fold0_path) else []
-        
+        pngs = []
+        if os.path.exists(fold0_path):
+            for _ext in ("*.png", "*.tif", "*.tiff"):
+                pngs.extend(glob.glob(os.path.join(fold0_path, _ext)))
+
         if not pngs: return # Cannot verify legacy segmentation
         
         # Create minimal metadata

@@ -11,6 +11,18 @@ def natural_key(string_text):
     """
     return [int(s) if s.isdigit() else s for s in re.split(r'(\d+)', string_text)]
 
+_IMAGE_EXTS = ("*.png", "*.tif", "*.tiff")
+
+def load_image_files(search_path):
+    """Load all image files (PNG/TIF/TIFF) from a directory, sorted naturally."""
+    data_root = pathlib.Path(search_path)
+    all_files = []
+    for ext in _IMAGE_EXTS:
+        all_files.extend(data_root.glob(ext))
+    all_files = [str(p) for p in all_files]
+    all_files.sort(key=natural_key)
+    return all_files
+
 def load_paths(search_path, ext='*.*'):
     """
     Glob patterns for files and sorts them naturally.

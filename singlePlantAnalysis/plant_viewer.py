@@ -40,7 +40,7 @@ def load_plant_data(plant_path):
     segPath = os.path.join(plant_path, "Images", "SegMulti")
     
     images = loadImagePath(imagePath) if imagePath and os.path.exists(imagePath) else []
-    segs = loadPath(segPath, ext="*.png")
+    segs = loadImagePath(segPath)
 
     if not images:
         local_img_path = os.path.join(plant_path, "Images")

@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from analysis.dataWork import dataWork
-from analysis.qr import qr_detect, get_pixel_size, load_path
+from analysis.qr import qr_detect, get_pixel_size, aruco_detect, aruco_get_pixel_size, load_path
 from analysis.report import plot_individual_plant
 from analysis.lateral_angles import getAngles
 from analysis.utils.fileUtilities import convertFromPathSafe, loadImageFiles
@@ -81,18 +81,26 @@ if __name__ == "__main__":
                 try:
                     pixel_size = metadata['pixel_size']
                 except KeyError:
-                    # [Calibration Logic simplified for brevity, keeping your existing logic]
-                    if not conf.get('videoHasQRbutton', True):
+                    has_qr    = conf.get('videoHasQRbutton', False) or conf.get('videoHasQR', False)
+                    has_aruco = conf.get('videoHasArucoButton', False) or conf.get('videoHasAruco', False)
+
+                    if not has_qr and not has_aruco:
                         pixel_size = float(conf['knownDistance']) / float(conf['pixelDistance'])
                     else:
                         image_path = metadata['ImagePath']
                         images = loadImageFiles(image_path)
-                        pixel_size = 0.04 # Default
-                        for i, image in enumerate(images[:20]):
-                            qr = qr_detect(image)
-                            if qr is not None:
-                                pixel_size = 10 / get_pixel_size(qr[0])
-                                break
+                        pixel_size = 0.04  # Default
+                        for image in images[:20]:
+                            if has_aruco:
+                                aruco_result = aruco_detect(image)
+                                if aruco_result is not None:
+                                    pixel_size = 10 / aruco_get_pixel_size(aruco_result[0])
+                                    break
+                            if has_qr:
+                                qr = qr_detect(image)
+                                if qr is not None:
+                                    pixel_size = 10 / get_pixel_size(qr[0])
+                                    break
                 
                 # 3. Process Individual Plants
                 for plant in plants:

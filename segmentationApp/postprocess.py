@@ -58,14 +58,14 @@ def find_segmentation_folders(seg_path):
         if os.path.isdir(item_path):
             # Check if it contains PNG files (segmentation results)
             if item.startswith("Fold_") or item.startswith("fold_"):
-                png_files = list(pathlib.Path(item_path).glob("*.png"))
-                if png_files:
+                img_files = [f for ext in ("*.png", "*.tif", "*.tiff") for f in pathlib.Path(item_path).glob(ext)]
+                if img_files:
                     fold_dirs.append(item)
-    
-    # If no fold directories found, check if PNG files are directly in seg_path
+
+    # If no fold directories found, check if image files are directly in seg_path
     if not fold_dirs:
-        png_files = list(pathlib.Path(seg_path).glob("*.png"))
-        if png_files:
+        img_files = [f for ext in ("*.png", "*.tif", "*.tiff") for f in pathlib.Path(seg_path).glob(ext)]
+        if img_files:
             # Treat the seg_path itself as a fold
             return ["."]
     
@@ -118,7 +118,10 @@ def postprocess(path, method="arabidopsis", alpha=None, num_classes=7, seg_path=
     
     # Images are loaded from the first fold directory
     first_fold_path = seg_path if folds[0] == "." else os.path.join(seg_path, folds[0])
-    images = loadPath(first_fold_path, ext='*.png')
+    images = []
+    for _ext in ("*.png", "*.tif", "*.tiff"):
+        images.extend(loadPath(first_fold_path, ext=_ext))
+    images.sort()
     
     # Initialize accumulator
     img = cv2.imread(images[0], 0)

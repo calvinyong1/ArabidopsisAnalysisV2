@@ -1,4 +1,4 @@
-""" 
+"""
 ChronoRoot: High-throughput phenotyping by deep learning reveals novel temporal parameters of plant root system architecture
 Copyright (C) 2020 Nicolás Gaggion
 
@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import cv2
+import cv2.aruco as aruco
 import numpy as np
 import pathlib
 import re
@@ -32,18 +33,15 @@ def load_path(search_path, ext = '*.png'):
     all_files = list(data_root.glob(ext))
     all_files = [str(path) for path in all_files]
     all_files.sort(key = natural_key)
-    
+
     return all_files
 
 
 def adjust_gamma(image, gamma=1.0):
-    # build a lookup table mapping the pixel values [0, 255] to
-    # their adjusted gamma values
     invGamma = 1.0 / gamma
     table = np.array([((i / 255.0) ** invGamma) * 255
         for i in np.arange(0, 256)]).astype("uint8")
- 
-    # apply gamma correction using the lookup table
+
     return np.float32(cv2.LUT(image.astype('uint8'), table))
 
 
@@ -78,7 +76,6 @@ def flat_field_correct(img=None):
 
         mat[:,:,i] = .05 + cv2.GaussianBlur(mat[:,:,i], (k_size,k_size), 1)
         img_o[:,:,i] = (img_o[:,:,i] *mat[:,:,i]).astype(np.float64)
-        # img_o[:,:,i] = cv.equalizeHist(img_o[:,:,i])
 
     if num_dim == 2:  # single channel img
         img_o = np.squeeze(img_o, axis=2)  # Removes the channel dimension
@@ -90,45 +87,45 @@ def qr_detect(inputImage):
     inputImage = cv2.imread(inputImage, 0)
     h, w = inputImage.shape
     h0 = 0
-    h1 = int(h//2) 
+    h1 = int(h//2)
     w0 = int(w//4)
     w1 = int(3*w0)
-        
+
     roi = inputImage[h0:h1, w0:w1]
 
-    kernel1 = cv2.getStructuringElement(cv2.MORPH_RECT, (10,10))    
+    kernel1 = cv2.getStructuringElement(cv2.MORPH_RECT, (10,10))
     kernel2 = cv2.getStructuringElement(cv2.MORPH_RECT, (40,40))
 
     gamma = 1.2
     blur_re = adjust_gamma(roi, gamma).astype('uint8')
-    
+
     a = flat_field_correct(blur_re)
     th3 = 255 - cv2.threshold(a ,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)[1]
 
-    cv2.erode(th3,kernel1, th3)    
+    cv2.erode(th3,kernel1, th3)
     cv2.dilate(th3, kernel2, th3)
     cv2.dilate(th3, kernel2, th3)
 
     contours, hierarchy = cv2.findContours(th3, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
+
     contour_sizes = [(cv2.contourArea(contour)) for contour in contours]
     contour_sizes = np.array(contour_sizes)
-    
+
     index2 = np.argsort(contour_sizes)[::-1]
     index = contour_sizes[index2] > 4000
-    
+
     data = []
-    
+
     for k in index2[index]:
         x, y, w, h = cv2.boundingRect(contours[k])
-        
+
         if w < 100 or h < 100:
             pass
         else:
             enmask = roi[y:y+h, x:x+w].copy()
-            
+
             cv2.medianBlur(enmask, 5, enmask)
-            
+
             th3aux = 255 - cv2.threshold(enmask, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)[1]
             cv2.bitwise_and(enmask, th3aux, enmask)
 
@@ -137,13 +134,13 @@ def qr_detect(inputImage):
                 adjust = adjust_gamma(enmask, gamma).astype('uint8')
 
                 data = pyzbar.decode(adjust)
-                
+
                 if len(data) > 0:
                     break
-            
+
             if len(data) > 0:
                 break
-            
+
     if len(data) > 0:
         return data
     else:
@@ -156,10 +153,29 @@ def get_pixel_size(detection):
 
     p1 = np.array(p1)
     p2 = np.array(p2)
-    
+
     largo = np.linalg.norm(p2-p1)
     return largo
-    
+
+
+def aruco_detect(inputImage):
+    img = cv2.imread(inputImage, cv2.IMREAD_GRAYSCALE)
+    dictionary = aruco.getPredefinedDictionary(aruco.DICT_4X4_1000)
+    parameters = aruco.DetectorParameters()
+    detector = aruco.ArucoDetector(dictionary, parameters)
+    corners, ids, _ = detector.detectMarkers(img)
+    if ids is not None and len(ids) > 0:
+        return corners
+    return None
+
+
+def aruco_get_pixel_size(detection):
+    # detection is a single marker's corners array, shape (1, 4, 2)
+    pts = detection[0]
+    p1 = np.array(pts[0])
+    p2 = np.array(pts[1])
+    return np.linalg.norm(p2 - p1)
+
 
 def check(path):
     lista = load_path(path)
@@ -168,4 +184,3 @@ def check(path):
         detect = qr_detect(image)[0]
         mmperpixel = get_pixel_size(detect) / 100.0
         print(mmperpixel)
-   

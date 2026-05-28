@@ -78,9 +78,10 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         data.update({field.objectName(): field.text() for field in [self.experimentName, self.videoField, self.projectField,
                                                                     self.everyXhourField, self.everyXhourFieldFourier, 
                                                                     self.everyXhourFieldAngles, self.numComponentsFPCAField]})
-        data.update({field.objectName(): field.isChecked() for field in [self.saveImagesButton, 
+        data.update({field.objectName(): field.isChecked() for field in [self.saveImagesButton,
                                                                          self.videoHasQRbutton,
-                                                                         self.saveImagesConvex, 
+                                                                         self.videoHasArucoButton,
+                                                                         self.saveImagesConvex,
                                                                          self.doConvex, self.doFourier, self.doLateralAngles,
                                                                          self.doFPCA, self.normFPCA, self.averagePerPlantStats]})
         
@@ -105,6 +106,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         data["MainFolder"] = data["projectField"]
         data["saveImages"] = data["saveImagesButton"]
         data["videoHasQR"] = data["videoHasQRbutton"]
+        data["videoHasAruco"] = data["videoHasArucoButton"]
         data["emergenceDistance"] = data["emergenceDistanceField"]
 
         if data["processingLimit"] != "":
@@ -158,6 +160,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
                         field.setText(data[field.objectName()])
 
                 for field in [self.saveImagesButton, self.videoHasQRbutton,
+                            self.videoHasArucoButton,
                             self.saveImagesConvex, self.doConvex, self.doFourier, self.doLateralAngles,
                             self.doFPCA, self.normFPCA, self.averagePerPlantStats]:
                     if field.objectName() in data:
@@ -465,8 +468,9 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
 
         # list all images in the folder with pathlib, then sort them
         pathlib_dir = pathlib.Path(overlayPath)
-        image_files = pathlib_dir.glob('*.png')
-        image_files = [str(file) for file in image_files]
+        image_files = []
+        for _ext in ("*.png", "*.tif", "*.tiff"):
+            image_files.extend([str(f) for f in pathlib_dir.glob(_ext)])
         image_files = sorted(image_files, key=lambda x: natural_keys(x))
 
         if len(image_files) == 0:
@@ -608,7 +612,10 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         
         # Check for segmentation files (required for analysis)
         seg_folder = os.path.join(video_folder, "Segmentation", "Ensemble")
-        seg_files = glob.glob(os.path.join(seg_folder, "*.png")) if os.path.exists(seg_folder) else []
+        seg_files = []
+        if os.path.exists(seg_folder):
+            for _ext in ("*.png", "*.tif", "*.tiff"):
+                seg_files.extend(glob.glob(os.path.join(seg_folder, _ext)))
         
         if not seg_files:
             QtWidgets.QMessageBox.warning(
@@ -620,12 +627,13 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
             return
         
         # Validate calibration settings
-        if not self.videoHasQRbutton.isChecked():                
+        has_auto_calib = self.videoHasQRbutton.isChecked() or self.videoHasArucoButton.isChecked()
+        if not has_auto_calib:
             if not self.knownDistanceField.text() or not self.pixelDistanceField.text():
                 QtWidgets.QMessageBox.warning(
-                    None, 'Error', 
+                    None, 'Error',
                     'Please provide both known distance and pixel distance for manual calibration,\n'
-                    'or enable "Video has QR codes"!'
+                    'or enable "Video has QR codes" or "Video has ArUco markers"!'
                 )
                 return
             
@@ -756,7 +764,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
                     
     def setupUi(self, chrono_root_analysis):
         chrono_root_analysis.setObjectName("ChronoRootAnalysis")
-        chrono_root_analysis.resize(811, 600)
+        chrono_root_analysis.resize(811, 630)
         self.central_widget = QtWidgets.QWidget(chrono_root_analysis)
         self.central_widget.setObjectName("centralwidget")
         
@@ -788,7 +796,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
 
     def setup_tabs(self):
         self.tab_widget = QtWidgets.QTabWidget(self.central_widget)
-        self.tab_widget.setGeometry(QtCore.QRect(0, 0, 811, 621))
+        self.tab_widget.setGeometry(QtCore.QRect(0, 0, 811, 651))
         self.tab_widget.currentChanged.connect(self.handle_tab_change)
         
         font = QtGui.QFont()
@@ -820,6 +828,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
                 field.setText(data[field.objectName()])
 
         for field in [self.saveImagesButton, self.videoHasQRbutton,
+                      self.videoHasArucoButton,
                       self.saveImagesConvex, self.doConvex, self.doFourier, self.doLateralAngles,
                       self.doFPCA, self.normFPCA, self.averagePerPlantStats]:
             if field.objectName() in data:
@@ -880,26 +889,30 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         self.videoHasQRbutton.setGeometry(QtCore.QRect(10, 410, 161, 31))
         self.videoHasQRbutton.setObjectName("videoHasQRbutton")
 
+        self.videoHasArucoButton = QtWidgets.QCheckBox(self.tab1)
+        self.videoHasArucoButton.setGeometry(QtCore.QRect(10, 440, 161, 31))
+        self.videoHasArucoButton.setObjectName("videoHasArucoButton")
+
         self.captureIntervalField = QtWidgets.QLineEdit(self.tab1)
-        self.captureIntervalField.setGeometry(QtCore.QRect(190, 500, 51, 31))
+        self.captureIntervalField.setGeometry(QtCore.QRect(190, 530, 51, 31))
         self.captureIntervalField.setObjectName("captureIntervalField")
         self.captureIntervalField.textChanged.connect(self.syncCaptureIntervalField)
 
         self.processingLimitField = QtWidgets.QLineEdit(self.tab1)
-        self.processingLimitField.setGeometry(QtCore.QRect(190, 450, 51, 31))
+        self.processingLimitField.setGeometry(QtCore.QRect(190, 480, 51, 31))
         self.processingLimitField.setObjectName("processingLimitField")
         self.processingLimitField.textChanged.connect(self.syncProcessingLimitField)
 
         self.emergenceDistanceField_2 = QtWidgets.QLineEdit(self.tab1)
-        self.emergenceDistanceField_2.setGeometry(QtCore.QRect(190, 550, 51, 31))
+        self.emergenceDistanceField_2.setGeometry(QtCore.QRect(190, 580, 51, 31))
         self.emergenceDistanceField_2.setObjectName("emergenceDistanceField_2")
-        
+
         self.emergenceDistanceLabel = QtWidgets.QLabel(self.tab1)
-        self.emergenceDistanceLabel.setGeometry(QtCore.QRect(10, 550, 161, 31))
+        self.emergenceDistanceLabel.setGeometry(QtCore.QRect(10, 580, 161, 31))
         self.emergenceDistanceLabel.setObjectName("emergenceDistanceLabel")
-        
+
         self.emergenceDistanceExp = QtWidgets.QLabel(self.tab1)
-        self.emergenceDistanceExp.setGeometry(QtCore.QRect(260, 550, 261, 31))
+        self.emergenceDistanceExp.setGeometry(QtCore.QRect(260, 580, 261, 31))
         self.emergenceDistanceExp.setObjectName("emergenceDistanceExp")
 
         self.saveButton = QtWidgets.QPushButton(self.tab1)
@@ -960,16 +973,16 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         self.label_9.setGeometry(QtCore.QRect(10, 350, 541, 31))
         self.label_9.setObjectName("label_9")
         self.label_11 = QtWidgets.QLabel(self.tab1)
-        self.label_11.setGeometry(QtCore.QRect(10, 500, 161, 31))
+        self.label_11.setGeometry(QtCore.QRect(10, 530, 161, 31))
         self.label_11.setObjectName("label_11")
         self.label_12 = QtWidgets.QLabel(self.tab1)
-        self.label_12.setGeometry(QtCore.QRect(10, 450, 161, 31))
+        self.label_12.setGeometry(QtCore.QRect(10, 480, 161, 31))
         self.label_12.setObjectName("label_12")
         self.label_26 = QtWidgets.QLabel(self.tab1)
-        self.label_26.setGeometry(QtCore.QRect(260, 450, 261, 31))
+        self.label_26.setGeometry(QtCore.QRect(260, 480, 261, 31))
         self.label_26.setObjectName("label_26")
         self.label_27 = QtWidgets.QLabel(self.tab1)
-        self.label_27.setGeometry(QtCore.QRect(260, 500, 261, 31))
+        self.label_27.setGeometry(QtCore.QRect(260, 530, 261, 31))
         self.label_27.setObjectName("label_27")
         self.label_30 = QtWidgets.QLabel(self.tab1)
         self.label_30.setGeometry(QtCore.QRect(10, 10, 541, 31))
@@ -1021,18 +1034,19 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         self.calibrateBtn.setText("Open Calibration Helper")
         self.calibrateBtn.clicked.connect(self.open_calibration_helper)
         
-        # Connect toggle function to checkbox
+        # Connect toggle function to both calibration checkboxes
         self.videoHasQRbutton.stateChanged.connect(self.toggle_calibration_mode)
-        
+        self.videoHasArucoButton.stateChanged.connect(self.toggle_calibration_mode)
+
         # Initialize visibility
         self.toggle_calibration_mode()
     
         return
     
     def toggle_calibration_mode(self):
-        """Toggle between QR and manual calibration modes"""
-        has_qr = self.videoHasQRbutton.isChecked()
-        self.manual_calib_widget.setVisible(not has_qr)
+        """Toggle between auto (QR/ArUco) and manual calibration modes"""
+        has_auto = self.videoHasQRbutton.isChecked() or self.videoHasArucoButton.isChecked()
+        self.manual_calib_widget.setVisible(not has_auto)
 
     def open_calibration_helper(self):
         """Opens calibration helper window"""
@@ -1552,7 +1566,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         def translate_main_elements():
             ChronoRootAnalysis.setWindowTitle(_translate("ChronoRootAnalysis", "ChronoRootAnalysis"))
             # Replace WIDTH and HEIGHT with the desired width and height of the window
-            fixed_size = QtCore.QSize(810, 650)
+            fixed_size = QtCore.QSize(810, 680)
 
             ChronoRootAnalysis.setMinimumSize(fixed_size)
             ChronoRootAnalysis.setMaximumSize(fixed_size)
@@ -1594,6 +1608,7 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
             set_translation(self.loadLastConfigButton, "Load\nprevious\nconfiguration")
             set_translation(self.saveImagesButton, "Save Cropped Images")
             set_translation(self.videoHasQRbutton, "Video has QR codes")
+            set_translation(self.videoHasArucoButton, "Video has ArUco markers")
             set_translation(self.analysisButton, "Analyze Plant")
             set_translation(self.previewAnalysisButton, "Preview video")
             set_translation(self.PostProcessButton, "Process\nall plants")
@@ -1657,6 +1672,10 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         
         self.saveImagesButton.setToolTip("Save individual plant crops; required for creating growth time-lapse videos.")
         self.videoHasQRbutton.setToolTip("Enable automatic scale detection using the 1-cm QR code in the images.")
+        self.videoHasArucoButton.setToolTip(
+            "Enable automatic scale detection using ArUco markers in the images.\n"
+            "Tried before QR codes when both are enabled."
+        )
         self.calibrateBtn.setToolTip("Manually define the physical scale by measuring a known distance in the image.")
 
         # --- Tab 2: Analysis Overview ---

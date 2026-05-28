@@ -136,10 +136,10 @@ class nnUNetv2:
         output_path.mkdir(parents=True, exist_ok=True)
         m_path = Path(metadata_path) if metadata_path else None
         
-        png_files = sorted(list(input_path.glob('*.png')))
-        if not png_files:
-            png_files = sorted(list(input_path.glob('*.tif')))
-            # raise ValueError(f"No PNG files found in {input_path}")
+        png_files = []
+        for _ext in ("*.png", "*.tif", "*.tiff"):
+            png_files.extend(input_path.glob(_ext))
+        png_files = sorted(png_files)
         
         total_files = len(png_files)
         print(f"Found {total_files} images in: {input_path}")

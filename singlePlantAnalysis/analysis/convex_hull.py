@@ -43,19 +43,19 @@ def calculate_atlas_geometry(experiment_paths: List[str]) -> Tuple[Tuple[int, in
         for r_path in result_paths:            
             # 1. Load Last Segmentation Image
             seg_folder = os.path.join(r_path, 'Images/Seg/')
-            seg_files = utils.load_paths(seg_folder, "*.png")
+            seg_files = utils.load_image_files(seg_folder)
             if not seg_files: continue
-            
+
             # Read image
             img = cv2.imread(seg_files[-1], 0)
-            
+
             # Apply standard padding for alignment
             img = np.pad(img, ((0,0), (PADDING_X, 0)))
-            
+
             # 2. Load Graph to find tips for rotation
             graph_folder = os.path.join(r_path, 'Graphs/')
             # Try to find corresponding graph file
-            graph_filename = os.path.basename(seg_files[-1]).replace('png', 'xml.gz')
+            graph_filename = os.path.splitext(os.path.basename(seg_files[-1]))[0] + '.xml.gz'
             graph_path = os.path.join(graph_folder, graph_filename)
             
             try: 
@@ -176,7 +176,7 @@ def generate_root_atlases(save_path, days, timestep, canvas_shape, center_coords
             df_temporal = pd.read_csv(csv_files[0])
 
             seg_path = os.path.join(r_path, 'Images/Seg/')
-            seg_files = utils.load_paths(seg_path, "*.png")
+            seg_files = utils.load_image_files(seg_path)
             
             # Select specific image index based on day
             img_idx = int(day * imgs_per_day)
@@ -360,7 +360,7 @@ def visualize_combined_atlases(folder):
         return
 
     for filename in os.listdir(source_dir):
-        if not filename.endswith(('png', 'jpg', 'jpeg')): continue
+        if not filename.endswith(('png', 'tif', 'tiff', 'jpg', 'jpeg')): continue
         
         # We need to group by Day, extracting from filenames like "Exp_Day_5.png"
         if "_Day_" in filename:

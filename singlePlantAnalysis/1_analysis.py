@@ -17,8 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from analysis.plantAnalysis import plantAnalysis
+from analysis.qr import aruco_detect, aruco_get_pixel_size
+from analysis.utils.fileUtilities import getImages
 import argparse
-import json 
+import json
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ChronoRoot: High-throughput phenotyping by deep learning reveals novel temporal parameters of plant root system architecture')
@@ -43,9 +45,28 @@ if __name__ == "__main__":
     conf['sequenceLabel'] = conf['Experiment'] + "_" + conf['Images'] + "_" + str(conf['plant'])
     conf['Plant'] = 'Arabidopsis thaliana'
     
-    if not conf.get('videoHasQRbutton', True):
+    if not conf.get('videoHasQRbutton', True) and not conf.get('videoHasArucoButton', True):
         pixel_size = float(conf['knownDistance']) / float(conf['pixelDistance'])
         conf['pixel_size'] = pixel_size
+
+    # --- ArUco debug: print the detected marker pixel width ---
+    if conf.get('videoHasArucoButton', False) or conf.get('videoHasAruco', False):
+        print("[ArUco Debug] ArUco checkbox is selected — scanning for markers...")
+        try:
+            image_paths, _ = getImages(conf)
+            found = False
+            for img_path in image_paths[:20]:
+                aruco_result = aruco_detect(img_path)
+                if aruco_result is not None:
+                    pixel_width = aruco_get_pixel_size(aruco_result[0])
+                    print(f"[ArUco Debug] Marker found in: {img_path}")
+                    print(f"[ArUco Debug] Marker width (pixel distance): {pixel_width:.2f} px")
+                    found = True
+                    break
+            if not found:
+                print("[ArUco Debug] No ArUco marker detected in the first 20 images.")
+        except Exception as e:
+            print(f"[ArUco Debug] Error during detection: {e}")
         
     if 'bounding box' in conf and args.rerun:
         plantAnalysis(conf, True)

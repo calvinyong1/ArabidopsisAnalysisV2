@@ -29,10 +29,10 @@ The installer will automatically:
 
 1. **Detect your Mac architecture** (Apple Silicon or Intel) and note that NVIDIA GPU is not available on macOS.
 2. **Install Miniconda** (if not already installed) — downloads the correct build for your architecture and installs it silently to `~/miniconda3`. You will be prompted to restart your terminal once after this step.
-3. **Install Homebrew and libzbar** (if Homebrew is already installed) — `libzbar` is required for QR code plate identification. If Homebrew is missing, the installer will warn you and ask whether to continue without QR support.
+3. **Install Homebrew and libzbar** (if Homebrew is already installed) — `libzbar` is required for QR code detection on older datasets. If Homebrew is missing, the installer will warn you and ask whether to continue without QR support. New datasets using ArUco markers do not require libzbar.
    - To install Homebrew first: visit [https://brew.sh](https://brew.sh)
 4. **Create the `ChronoRoot` Conda environment** from `environment.yml`, which includes:
-   - Python 3.13, PyQt5, NumPy, OpenCV, scikit-image, scikit-fda, nnUNetv2, and all other dependencies.
+   - Python 3.13, PyQt5, NumPy, OpenCV (contrib), scikit-image, scikit-fda, nnUNetv2, and all other dependencies.
    - If the environment already exists, it updates it in place.
 5. **Download segmentation model weights** from Hugging Face into `segmentationApp/models/`.
 6. **Create macOS `.app` launchers** in `~/Applications/` with desktop shortcuts on `~/Desktop/`:
@@ -113,8 +113,11 @@ ArabidopsisAnalysis/
 **`conda` command not found after install**
 Close and reopen your terminal, then try again. The installer adds conda to your shell profile, but it takes effect on the next session.
 
-**QR code detection not working**
-Ensure `libzbar` is installed via Homebrew: `brew install zbar`. The `DYLD_LIBRARY_PATH` in the `.app` launcher points to `/opt/homebrew/lib` automatically.
+**ArUco marker not detected**
+Ensure the printed marker uses the `DICT_4X4_250` dictionary (IDs 0–249). The marker must be at least 100×100 px in the captured image. ArUco detection does not require any additional system libraries.
+
+**QR code detection not working (older datasets)**
+Ensure `libzbar` is installed via Homebrew: `brew install zbar`. The `DYLD_LIBRARY_PATH` in the `.app` launcher points to `/opt/homebrew/lib` automatically. QR code support is retained for backward compatibility; new experiments should use ArUco markers.
 
 **Segmentation is slow**
 Expected on macOS — nnUNet runs on CPU. For GPU-accelerated segmentation, use a Linux machine with a CUDA-capable GPU and the Linux installer.

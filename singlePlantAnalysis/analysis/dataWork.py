@@ -49,14 +49,24 @@ def dataWork(conf, pfile, folder, N_exp = None, debug=False, time_tolerance=0.5)
     
     # Read info from the filename
     dates = []
-    for i in range(0,N):
+    for i in range(0, N):
         name = data['FileName'][i]
         nums = re.findall(r'\d+', name)
-        if len(nums) < 5:
+        date_str = None
+
+        # Compact format: contains an 8-digit date (YYYYMMDD) and 6-digit time (HHMMSS)
+        compact_date = next((n for n in nums if len(n) == 8), None)
+        compact_time = next((n for n in nums if len(n) == 6), None)
+        if compact_date and compact_time:
+            date_str = f"{compact_date[:4]}-{compact_date[4:6]}-{compact_date[6:8]}-{compact_time[:2]}:{compact_time[2:4]}"
+        elif len(nums) >= 5:
+            # Split format: year, month, day, hour, minute as separate numbers
+            date_str = nums[0] + '-' + nums[1] + '-' + nums[2] + '-' + nums[3] + ':' + nums[4]
+
+        if date_str is None:
             warnings.warn(f"Cannot parse date from filename: {name}")
             continue
-        date = nums[0] + '-' + nums[1] + '-' + nums[2] + '-' + nums[3] + ':' + nums[4] 
-        dates.append(date)
+        dates.append(date_str)
 
     data.insert(data.shape[1], 'Date', dates)
     data['Date'] = pd.to_datetime(data['Date'], format='%Y-%m-%d-%H:%M')
