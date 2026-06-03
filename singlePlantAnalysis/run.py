@@ -451,7 +451,11 @@ class Ui_ChronoRootAnalysis(QtWidgets.QMainWindow):
         if not os.path.exists(os.path.join(self.selected_plant, "log.txt")):
             return None, None, None, None
         
-        metadata = json.load(open(os.path.join(self.selected_plant, "metadata.json"), 'r'))
+        try:
+            with open(os.path.join(self.selected_plant, "metadata.json"), 'r') as _f:
+                metadata = json.load(_f)
+        except (json.JSONDecodeError, FileNotFoundError, KeyError):
+            return "Image not found", None, None, None
         bbox = metadata["bounding box"]
         overlayPath = metadata["folders"]["images"] + "/SegMulti/"
         

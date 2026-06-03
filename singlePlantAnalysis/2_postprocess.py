@@ -94,7 +94,7 @@ if __name__ == "__main__":
                             if has_aruco:
                                 aruco_result = aruco_detect(image)
                                 if aruco_result is not None:
-                                    pixel_size = 10 / aruco_get_pixel_size(aruco_result[0])
+                                    pixel_size = 15 / aruco_get_pixel_size(aruco_result[0])
                                     break
                             if has_qr:
                                 qr = qr_detect(image)
