@@ -43,17 +43,42 @@ def compute_transforms(marker_corners):
     reference = marker_corners[0][0][0].astype(np.float32)
     transforms = [] # Array of transformation that needs to be applied to each image
     
-    for corners in marker_corners:
+    for i, corners in enumerate(marker_corners):
         if corners is None:
             transforms.append(None)
         else:
             current = corners[0][0].astype(np.float32)
-            M = cv2.getPerspectiveTransform(current,reference)
+            ref_centroid = np.mean(reference, axis=0)
+            cur_centroid = np.mean(current, axis=0)
+            tx = ref_centroid[0] - cur_centroid[0]
+            ty = ref_centroid[1] - cur_centroid[1]
+            M = np.float32([[1, 0, tx], [0, 1, ty]])
             transforms.append(M)
     
     return transforms
             
-# def apply_transforms(image_paths):
+def apply_transforms(image_paths,transform_matrices):
+    # Create the output directory
+    output_folder = pathlib.Path(image_paths[0]).parent / "aligned"
+    output_folder.mkdir(exist_ok=True)
+    
+    for i in range(0,len(image_paths)):
+        file_name = os.path.basename(image_paths[i])
+        name, extension = os.path.splitext(file_name)
+        file_name = name + "_aligned" + extension
+        
+        
+        image = cv2.imread(str(image_paths[i]))
+        h, w = image.shape[:2]
+        
+        if transform_matrices[i] is None:
+          print(f"Warning: no transform for {os.path.basename(image_paths[i])}, copying unmodified")
+          transformed_image = image
+        else:
+            transformed_image = cv2.warpAffine(image, transform_matrices[i], (w, h))
+
+        full_path = os.path.join(output_folder, file_name)
+        cv2.imwrite(full_path, transformed_image)
         
 
 if __name__ == "__main__":
@@ -61,6 +86,4 @@ if __name__ == "__main__":
     matching_files = get_input_folder(folder_path)
     marker_corners = detect_marker_corners(matching_files)
     transforms = compute_transforms(marker_corners)
-    print (transforms)
-    
-    
+    apply_transforms(matching_files, transforms)
