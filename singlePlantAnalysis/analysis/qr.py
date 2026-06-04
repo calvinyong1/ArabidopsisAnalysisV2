@@ -162,6 +162,7 @@ def aruco_detect(inputImage):
     img = cv2.imread(inputImage, cv2.IMREAD_GRAYSCALE)
     dictionary = aruco.getPredefinedDictionary(aruco.DICT_4X4_1000)
     parameters = aruco.DetectorParameters()
+    parameters.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
     detector = aruco.ArucoDetector(dictionary, parameters)
     corners, ids, _ = detector.detectMarkers(img)
     if ids is not None and len(ids) > 0:

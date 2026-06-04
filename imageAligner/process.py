@@ -4,6 +4,7 @@ import numpy as np
 import os
 import pathlib
 import sys
+import scipy.ndimage
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 from singlePlantAnalysis.analysis.qr import aruco_detect
@@ -51,11 +52,63 @@ def compute_transforms(marker_corners):
             ref_centroid = np.mean(reference, axis=0)
             cur_centroid = np.mean(current, axis=0)
             tx = ref_centroid[0] - cur_centroid[0]
-            ty = ref_centroid[1] - cur_centroid[1]
+            ty = 0
             M = np.float32([[1, 0, tx], [0, 1, ty]])
             transforms.append(M)
     
     return transforms
+
+# def compute_transforms(marker_corners):
+#       if marker_corners[0] is None:
+#           raise ValueError("No ArUco marker detected in the first frame — cannot establish reference.")
+
+#       # Collect all centroids
+#       centroids = []
+#       for corners in marker_corners:
+#           if corners is None:
+#               centroids.append(None)
+#           else:
+#               pts = corners[0][0].astype(np.float32)
+#               centroids.append(np.mean(pts, axis=0))
+
+#       # Fill None gaps with nearest valid centroid for smoothing
+#       filled = _fill_none(centroids)
+
+#       # Smooth tx/ty series with a Gaussian filter
+#       xs = scipy.ndimage.gaussian_filter1d([c[0] for c in filled], sigma=5)
+#       ys = scipy.ndimage.gaussian_filter1d([c[1] for c in filled], sigma=5)
+  
+#       ref_x, ref_y = xs[0], ys[0]
+  
+#       transforms = []
+#       for i, corners in enumerate(marker_corners):
+#           if corners is None:
+#               transforms.append(None)
+#           else:
+#               M = np.float32([[1, 0, ref_x - xs[i]],
+#                               [0, 1, ref_y - ys[i]]])
+#               transforms.append(M)
+
+#       return transforms
+
+
+# def _fill_none(centroids):
+#     filled = list(centroids)
+#     # Forward fill
+#     last = None
+#     for i, c in enumerate(filled):
+#         if c is not None:
+#             last = c
+#         elif last is not None:
+#             filled[i] = last
+#     # Backward fill for leading Nones
+#     last = None
+#     for i in range(len(filled) - 1, -1, -1):
+#         if filled[i] is not None:
+#             last = filled[i]
+#         elif last is not None:
+#             filled[i] = last
+#     return filled
             
 def apply_transforms(image_paths,transform_matrices):
     # Create the output directory
