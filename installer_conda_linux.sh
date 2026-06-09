@@ -53,13 +53,19 @@ main() {
         print_status "No NVIDIA GPU detected. Using CPU-only mode."
     fi
 
-    # 2. Setup Directory
-    section_title "2. Directory Setup"
+    # 2. System Dependencies
+    section_title "2. System Dependencies"
+    print_status "Installing libzbar (required for QR code support)..."
+    sudo apt-get install -y libzbar0
+    print_success "libzbar installed."
+
+    # 3. Setup Directory
+    section_title "3. Directory Setup"
     mkdir -p "$INSTALL_DIR"
     print_status "Installation path: $INSTALL_DIR"
 
-    # 3. Repository Setup
-    section_title "3. Downloading Repository"
+    # 4. Repository Setup
+    section_title "4. Downloading Repository"
     cd "$INSTALL_DIR"
     if [ ! -d "ChronoRoot2" ]; then
         print_status "Cloning repository..."
@@ -70,8 +76,8 @@ main() {
     fi
     REPO_DIR="$INSTALL_DIR/ChronoRoot2"
 
-    # 4. Environment & Capability Selection
-    section_title "4. Configuration Selection"
+    # 5. Environment & Capability Selection
+    section_title "5. Configuration Selection"
     
     echo "Choose your installation type:"
     echo -e "1) ${BOLD}Full Node${NC} (Executes Segmentation + Analysis. Requires GPU)."
@@ -115,8 +121,8 @@ main() {
         fi
     fi
 
-    # 5. Conda Environment Install
-    section_title "5. Conda Environment Setup"
+    # 6. Conda Environment Install
+    section_title "6. Conda Environment Setup"
     ENV_NAME="ChronoRoot"
     
     if conda env list | grep -q "$ENV_NAME"; then
@@ -129,7 +135,7 @@ main() {
 
     # 6. Download Weights (Only if Full Node)
     if [ "$DOWNLOAD_WEIGHTS" = true ]; then
-        section_title "6. Downloading Segmentation Weights"
+        section_title "7. Downloading Segmentation Weights"
         
         WEIGHTS_SCRIPT="$REPO_DIR/segmentationApp/download_weights.sh"
         
@@ -145,8 +151,8 @@ main() {
         echo -e "\n${BLUE}[INFO]${NC} Skipping weight download (Monitoring/Lite mode selected)."
     fi
 
-    # 7. Launcher Generation
-    section_title "7. Creating Desktop Launchers"
+    # 8. Launcher Generation
+    section_title "8. Creating Desktop Launchers"
     CONDA_BASE=$(conda info --base)
     
     create_local_shortcut() {
@@ -187,6 +193,7 @@ EOF
     # Always install Core Apps
     create_local_shortcut "ChronoRoot App" "ChronoRootApp" "chronoRootApp" "logo.ico"
     create_local_shortcut "ChronoRoot Screening" "ChronoRootScreening" "chronoRootScreeningApp" "logo_screening.ico"
+    create_local_shortcut "ChronoRoot Image Aligner" "ChronoRootImageAligner" "imageAligner" "logo.ico"
     
     # Conditionally install Segmentation GUI
     if [ "$INSTALL_SEG_GUI" = true ]; then

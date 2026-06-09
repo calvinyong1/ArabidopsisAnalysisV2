@@ -55,16 +55,22 @@ main() {
         print_status "No active NVIDIA GPU detected. Using CPU-only mode."
     fi
 
-    # 2. Setup Directory
-    section_title "2. Directory Setup"
+    # 2. System Dependencies
+    section_title "2. System Dependencies"
+    print_status "Installing libzbar (required for QR code support)..."
+    sudo apt-get install -y libzbar0
+    print_success "libzbar installed."
+
+    # 3. Setup Directory
+    section_title "3. Directory Setup"
     read -p "Installation directory (Default: $DEFAULT_INSTALL_DIR): " user_install_dir
     INSTALL_DIR="${user_install_dir:-$DEFAULT_INSTALL_DIR}"
     INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
     mkdir -p "$INSTALL_DIR"
     print_status "Installing to: $INSTALL_DIR"
 
-    # 3. Repository Setup
-    section_title "3. Downloading Repository"
+    # 4. Repository Setup
+    section_title "4. Downloading Repository"
     REPO_DIR="$INSTALL_DIR/ChronoRoot2"
     
     if [ ! -d "$REPO_DIR" ]; then
@@ -75,8 +81,8 @@ main() {
         (cd "$REPO_DIR" && git pull)
     fi
 
-    # 4. Configuration Selection
-    section_title "4. Configuration Selection"
+    # 5. Configuration Selection
+    section_title "5. Configuration Selection"
     echo "Choose your installation type:"
     echo -e "1) ${BOLD}Full Node${NC} (Executes Segmentation + Analysis. Requires GPU)."
     echo -e "2) ${BOLD}Lite Node${NC} (Analysis only. Runs on standard Laptops)."
@@ -118,8 +124,8 @@ main() {
         fi
     fi
 
-    # 5. Conda Environment Setup
-    section_title "5. Conda Environment Setup"
+    # 6. Conda Environment Setup
+    section_title "6. Conda Environment Setup"
 
     # Create/Update Environment
     if conda env list | grep -q "$ENV_NAME"; then
@@ -132,7 +138,7 @@ main() {
 
     # 6. Download Weights (Only if Full Node)
     if [ "$DOWNLOAD_WEIGHTS" = true ]; then
-        section_title "6. Downloading Segmentation Weights"
+        section_title "7. Downloading Segmentation Weights"
         
         WEIGHTS_SCRIPT="$REPO_DIR/segmentationApp/download_weights.sh"
         
@@ -148,8 +154,8 @@ main() {
         echo -e "\n${BLUE}[INFO]${NC} Skipping weight download (Monitoring/Lite mode selected)."
     fi
 
-    # 7. Windows Integration
-    section_title "7. Configuring Windows Shortcuts"
+    # 8. Windows Integration
+    section_title "8. Configuring Windows Shortcuts"
     
     # Windows Paths
     [ -z "$WSL_DISTRO_NAME" ] && WSL_DISTRO_NAME="Ubuntu"
@@ -226,6 +232,7 @@ EOF
     # Generate Shortcuts
     create_wsl_shortcut "ChronoRootApp" "chronoRootApp" "logo.ico"
     create_wsl_shortcut "ChronoRootScreening" "chronoRootScreeningApp" "logo_screening.ico"
+    create_wsl_shortcut "ChronoRootImageAligner" "imageAligner" "logo.ico"
 
     # Conditional Segmentation Shortcut
     if [ "$INSTALL_SEG_GUI" = true ]; then

@@ -193,8 +193,9 @@ PLISTEOF
         print_success "Desktop shortcut: ~/Desktop/${display_name}.app"
     }
 
-    create_mac_app "ChronoRoot Analysis"     "$SCRIPT_DIR/singlePlantAnalysis"
-    create_mac_app "ChronoRoot Segmentation" "$SCRIPT_DIR/segmentationApp"
+    create_mac_app "ChronoRoot Analysis"      "$SCRIPT_DIR/singlePlantAnalysis"
+    create_mac_app "ChronoRoot Segmentation"  "$SCRIPT_DIR/segmentationApp"
+    create_mac_app "ChronoRoot Image Aligner" "$SCRIPT_DIR/imageAligner"
 
     # 7. Done
     section_title "Installation Complete"
