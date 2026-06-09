@@ -115,7 +115,7 @@ if __name__ == "__main__":
                         plant_metadata = json.load(f)
 
                     # Update metadata with calculated pixel size
-                    plant_metadata['pixel_size'] = pixel_size
+                    plant_metadata['pixel_size'] = float(pixel_size)
                     with open(meta_file, 'w') as f:
                         json.dump(plant_metadata, f)
 
