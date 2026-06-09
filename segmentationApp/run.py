@@ -347,24 +347,32 @@ class nnUNetMonitorUI(QMainWindow):
         }
         
         # --- 1. Determine Image Count & Metadata ---
-        meta_file = Path(folder_path) / 'Segmentation' / 'segmentation_metadata.json'
+        # If an aligned/ subfolder exists, all output lives there instead of the root.
+        aligned_dir = Path(folder_path) / 'aligned'
+        seg_root = aligned_dir if aligned_dir.exists() else Path(folder_path)
+
+        meta_file = seg_root / 'Segmentation' / 'segmentation_metadata.json'
         meta = None
-        
+
         # Try reading metadata first
         if meta_file.exists():
             try:
                 with open(meta_file, 'r') as f:
                     meta = json.load(f)
-                    data['total_images'] = meta.get('n_images', 0)                    
+                    data['total_images'] = meta.get('n_images', 0)
                     data['stored_alpha'] = meta.get('alpha_used', None)
                     data['model'] = meta.get('model', None)
             except: pass
 
-        # Fallback to file count
+        # Fallback to file count (prefer aligned/ images, then root)
         if data['total_images'] == 0:
-            pngs = glob.glob(os.path.join(folder_path, '*.png'))
-            tifs = glob.glob(os.path.join(folder_path, '*.tif')) + glob.glob(os.path.join(folder_path, '*.tiff'))
-            data['total_images'] = len(pngs) + len(tifs)
+            for search_dir in ([seg_root, Path(folder_path)] if seg_root != Path(folder_path) else [Path(folder_path)]):
+                pngs = glob.glob(str(search_dir / '*.png'))
+                tifs = glob.glob(str(search_dir / '*.tif')) + glob.glob(str(search_dir / '*.tiff'))
+                count = len(pngs) + len(tifs)
+                if count > 0:
+                    data['total_images'] = count
+                    break
 
         if data['total_images'] == 0:
             data['status'] = 'No Images'
@@ -374,8 +382,10 @@ class nnUNetMonitorUI(QMainWindow):
         
         # Check if currently queued/running
         is_queued = any(item['path'] == folder_path for item in self.processing_queue)
-        is_running = (self.current_worker is not None and 
-                      os.path.abspath(self.current_worker.input_path) == os.path.abspath(folder_path))
+        is_running = (self.current_worker is not None and (
+            os.path.abspath(str(self.current_worker.input_path)) == os.path.abspath(folder_path) or
+            os.path.abspath(str(Path(self.current_worker.input_path).parent)) == os.path.abspath(folder_path)
+        ))
 
         if is_running:            
             if self.current_worker.postprocess_only:
@@ -516,7 +526,7 @@ class nnUNetMonitorUI(QMainWindow):
         else:
             # --- Legacy Fallback Logic ---
             # Check for Fold_0 (Segmentation)
-            fold0_path = os.path.join(folder_path, "Segmentation", "Fold_0")
+            fold0_path = str(seg_root / "Segmentation" / "Fold_0")
             if os.path.exists(fold0_path):
                 seg_count = (len(glob.glob(os.path.join(fold0_path, "*.png"))) +
                              len(glob.glob(os.path.join(fold0_path, "*.tif"))) +
@@ -525,7 +535,7 @@ class nnUNetMonitorUI(QMainWindow):
                 seg_count = 0
 
             # Check for Ensemble (Postprocessing)
-            ensemble_path = os.path.join(folder_path, "Segmentation", "Ensemble")
+            ensemble_path = str(seg_root / "Segmentation" / "Ensemble")
             if os.path.exists(ensemble_path):
                 post_count = (len(glob.glob(os.path.join(ensemble_path, "*.png"))) +
                               len(glob.glob(os.path.join(ensemble_path, "*.tif"))) +
@@ -970,11 +980,52 @@ class nnUNetMonitorUI(QMainWindow):
             # Refresh to update status to "Not Started"
             self.refresh_data()
             
+    def _check_alignment(self, path):
+        """
+        Returns (ok, partial) where ok=False means no aligned images exist at all,
+        and partial=True means some but fewer than the source count are aligned.
+        """
+        extensions = {'.png', '.tif', '.tiff'}
+        folder = Path(path)
+        source_count = sum(1 for p in folder.glob('*') if p.suffix.lower() in extensions)
+        aligned_folder = folder / 'aligned'
+        aligned_count = 0
+        if aligned_folder.exists():
+            aligned_count = sum(1 for p in aligned_folder.glob('*') if p.suffix.lower() in extensions)
+        return aligned_count, source_count
+
     def add_to_queue(self, path, robot, op, model, alpha):
-        item = {'path': path, 'robot': robot, 'operation': op, 'model': model, 'alpha': alpha}
+        aligned_count, source_count = self._check_alignment(path)
+        folder_name = os.path.basename(path)
+
+        # Alignment guard: only blocks segmentation operations
+        if op in ('both', 'resume'):
+            if source_count > 0 and aligned_count == 0:
+                QMessageBox.warning(
+                    self, "Images Not Aligned",
+                    f"<b>{folder_name}</b> has not been aligned yet.<br><br>"
+                    "Please run the <b>Image Aligner</b> on this folder before starting segmentation."
+                )
+                return
+
+            if source_count > 0 and aligned_count < source_count:
+                reply = QMessageBox.warning(
+                    self, "Partial Alignment",
+                    f"<b>{folder_name}</b> is only partially aligned "
+                    f"({aligned_count} of {source_count} images).<br><br>"
+                    "Segmentation will run on the partial aligned set. Continue anyway?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                )
+                if reply != QMessageBox.Yes:
+                    return
+
+        # Route CLI input to aligned/ when aligned images are present
+        input_path = str(Path(path) / 'aligned') if aligned_count > 0 else path
+
+        item = {'path': path, 'input_path': input_path, 'robot': robot, 'operation': op, 'model': model, 'alpha': alpha}
         if item not in self.processing_queue:
             self.processing_queue.append(item)
-            self.log_message(f"Added to queue: {os.path.basename(path)} ({op}), alpha={alpha})")
+            self.log_message(f"Added to queue: {folder_name} ({op}), alpha={alpha})")
             self.refresh_data()
         self.update_queue_label()
 
@@ -1026,13 +1077,15 @@ class nnUNetMonitorUI(QMainWindow):
             
     def process_queue(self):
         if self.current_worker or not self.processing_queue: return
-        
+
         item = self.processing_queue.pop(0)
+        input_path = item.get('input_path', item['path'])
+
         if item['operation'] == 'postprocess':
-            self.ensure_legacy_metadata(item['path'])
-            
+            self.ensure_legacy_metadata(input_path)
+
         self.current_worker = CLIWorker(
-            item['path'], item['robot'], self.species, item['alpha'],
+            input_path, item['robot'], self.species, item['alpha'],
             postprocess_only=(item['operation'] == 'postprocess'),
             resume=(item['operation'] == 'resume'),
             fast_mode=self.fast_mode, conda_env=self.conda_env
@@ -1040,7 +1093,9 @@ class nnUNetMonitorUI(QMainWindow):
         self.current_worker.finished.connect(self.on_worker_done)
         self.current_worker.error.connect(self.on_worker_done)
         self.current_worker.progress.connect(
-            lambda p, m: self.log_message(f"[{os.path.basename(p)}] {m}")
+            lambda p, m: self.log_message(
+                f"[{Path(p).parent.name if Path(p).name == 'aligned' else Path(p).name}] {m}"
+            )
         )
         self.current_worker.start()
         self.update_queue_label()
@@ -1059,7 +1114,12 @@ class nnUNetMonitorUI(QMainWindow):
 
     def update_queue_label(self):
         q_len = len(self.processing_queue)
-        curr = f"Processing: {self.current_worker.input_path.name}" if self.current_worker else "Idle"
+        if self.current_worker:
+            wp = self.current_worker.input_path
+            display_name = wp.parent.name if wp.name == 'aligned' else wp.name
+            curr = f"Processing: {display_name}"
+        else:
+            curr = "Idle"
         self.queue_info_label.setText(f"Queue: {q_len} | {curr}")
 
     def refresh_data(self):
