@@ -13,4 +13,4 @@ Before segmentation begins, check that input images have been aligned by the ima
   - If `aligned/` is missing or empty, block the job and show a warning dialog (PyQt `QMessageBox`) prompting the user to run the Image Aligner first.
   - If `aligned/` is present but the count is less than the source folder image count, warn but allow the user to proceed anyway (partial alignment).
 - [x] Pass the `aligned/` subfolder path as the actual input to the segmentation pipeline instead of the parent folder, so the pipeline runs on aligned images automatically.
-- [ ] Update the table row status display to reflect alignment state (e.g., "Not Aligned" status color).
+- [x] Update the table row status display to reflect alignment state (e.g., "Not Aligned" status color).

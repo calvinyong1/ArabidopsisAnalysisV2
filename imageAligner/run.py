@@ -20,6 +20,7 @@ class AlignWorker(QThread):
     progress = pyqtSignal(int, int, str)  # current, total, message
     finished = pyqtSignal(str)
     error = pyqtSignal(str)
+    warning = pyqtSignal(str)
     
     def __init__(self, folder_path):
         super().__init__()
@@ -45,10 +46,35 @@ class AlignWorker(QThread):
 
             # Check first frame before computing transforms
             if marker_corners[0] is None:
-                self.error.emit("No ArUco marker detected in the first frame — cannot establish reference.")
+                self.warning.emit("No ArUco marker detected in the first frame — images left unaligned.")
+                
+                # Create the output directory
+                output_folder = Path(image_paths[0]).parent / "aligned"
+                output_folder.mkdir(exist_ok=True)
+                
+                for i in range(0,len(image_paths)):
+                    file_name = os.path.basename(image_paths[i])
+                    name, extension = os.path.splitext(file_name)
+                    file_name = name + "_aligned" + extension
+                    
+                    
+                    image = cv2.imread(str(image_paths[i]))
+                    if image is None:
+                        self.error.emit(f"Failed to read image: {image_paths[i].name}")
+                        return
+                        
+                    h, w = image.shape[:2]
+                    
+                    transformed_image = image
+
+                    full_path = os.path.join(output_folder, file_name)
+                    cv2.imwrite(full_path, transformed_image)
+                    self.progress.emit(total + i + 1, total * 2, f"Aligning: {image_paths[i].name}")
+
+                self.finished.emit(str(self.folder_path))
                 return
-            
-            transform_matrices = process.compute_transforms(marker_corners)
+             
+            transform_matrices = process.compute_transforms(marker_corners)    
             
             # Create the output directory
             output_folder = Path(image_paths[0]).parent / "aligned"
@@ -361,6 +387,7 @@ class ImageAlignerUI(QMainWindow):
         self.current_worker.progress.connect(self.on_progress)
         self.current_worker.finished.connect(self.on_worker_done)
         self.current_worker.error.connect(self.on_error)
+        self.current_worker.warning.connect(self.on_warning)
         self.current_worker.start()
 
         self.update_queue_label()
@@ -374,6 +401,9 @@ class ImageAlignerUI(QMainWindow):
     def on_worker_done(self, path):
         self.log_message(f"Complete: {Path(path).name}")
         self._cleanup_worker()
+    
+    def on_warning(self, msg):
+        self.log_message(f"Warning: {msg}")
 
     def on_error(self, msg):
         self.log_message(f"Error: {msg}")
