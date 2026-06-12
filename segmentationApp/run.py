@@ -282,8 +282,8 @@ class nnUNetMonitorUI(QMainWindow):
         self.robot_filter.currentTextChanged.connect(self.update_table)
         
         self.status_filter = QComboBox()
-        self.status_filter.addItems(["All Status", "Not Started", "Queued", "Segmenting", 
-                                    "Stalled", "Segmented", "Postprocessing", 
+        self.status_filter.addItems(["All Status", "Not Started", "Not Aligned", "Partially Aligned",
+                                    "Queued", "Segmenting", "Stalled", "Segmented", "Postprocessing",
                                     "Complete", "Different Alpha", "Different Model", "Error"])
         self.status_filter.currentTextChanged.connect(self.update_table)
         
@@ -557,7 +557,13 @@ class nnUNetMonitorUI(QMainWindow):
                 data['seg_progress'] = int((seg_count / data['total_images']) * 100)
                 data['post_progress'] = 0.0
             else:
-                data['status'] = 'Not Started'
+                aligned_count, source_count = self._check_alignment(folder_path)
+                if source_count > 0 and aligned_count == 0:
+                    data['status'] = 'Not Aligned'
+                elif source_count > 0 and aligned_count < source_count:
+                    data['status'] = 'Partially Aligned'
+                else:
+                    data['status'] = 'Not Started'
 
         return data
 
@@ -590,21 +596,23 @@ class nnUNetMonitorUI(QMainWindow):
 
             # Status Color Map
             colors = {
-                'Complete': QColor(200, 255, 200),         
+                'Complete': QColor(200, 255, 200),
                 'Complete (Legacy)': QColor(210, 255, 210),
                 'Segmented': QColor(200, 230, 255),
-                'Segmented (Legacy)': QColor(200, 230, 255),     
-                'Segmenting': QColor(255, 255, 224),       
-                'Postprocessing': QColor(230, 200, 255),   
-                'Queued': QColor(255, 255, 200),           
-                'Stalled': QColor(255, 200, 100),          
-                'Different Alpha': QColor(255, 240, 150), 
+                'Segmented (Legacy)': QColor(200, 230, 255),
+                'Segmenting': QColor(255, 255, 224),
+                'Postprocessing': QColor(230, 200, 255),
+                'Queued': QColor(255, 255, 200),
+                'Stalled': QColor(255, 200, 100),
+                'Different Alpha': QColor(255, 240, 150),
                 'Different Model': QColor(255, 240, 150),
                 'Different Model and Alpha': QColor(255, 240, 150),
-                'Error (Seg)': QColor(255, 200, 200),      
+                'Error (Seg)': QColor(255, 200, 200),
                 'Error (Post)': QColor(255, 200, 200),
-                'Incomplete (Legacy)': QColor(255, 220, 180),  
-                'No Images': QColor(240, 240, 240)         
+                'Incomplete (Legacy)': QColor(255, 220, 180),
+                'No Images': QColor(240, 240, 240),
+                'Not Aligned': QColor(255, 190, 180),
+                'Partially Aligned': QColor(255, 225, 185),
             }
 
             for row, data in enumerate(filtered_rows):
@@ -723,12 +731,30 @@ class nnUNetMonitorUI(QMainWindow):
             btn.clicked.connect(lambda: self.add_to_queue(path, robot, 'resume', model, alpha))
             buttons_to_add.append(btn)
 
-        # SCENARIO: Standard Start 
+        # SCENARIO: Standard Start
         elif status in ['Not Started']:
             btn = QPushButton("Start Pipeline")
-            btn.setToolTip(f"Run full segmentation ({model}) and postprocessing ({alpha})") 
+            btn.setToolTip(f"Run full segmentation ({model}) and postprocessing ({alpha})")
             btn.setFixedSize(225, 25)
             btn.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold;}")
+            btn.clicked.connect(lambda: self.add_to_queue(path, robot, 'both', model, alpha))
+            buttons_to_add.append(btn)
+
+        # SCENARIO: Not Aligned — block with informative label
+        elif status == 'Not Aligned':
+            lbl = QLabel("Run Image Aligner first")
+            lbl.setAlignment(Qt.AlignCenter)
+            lbl.setStyleSheet("color: #b71c1c; font-style: italic;")
+            self.table.setItem(row, 7, None)
+            self.table.setCellWidget(row, 7, lbl)
+            return
+
+        # SCENARIO: Partially Aligned — allow start (queue guard shows a confirmation)
+        elif status == 'Partially Aligned':
+            btn = QPushButton("Start Pipeline")
+            btn.setToolTip("Some images are unaligned — you will be asked to confirm before starting")
+            btn.setFixedSize(225, 25)
+            btn.setStyleSheet("QPushButton { background-color: #FF8C00; color: white; font-weight: bold;}")
             btn.clicked.connect(lambda: self.add_to_queue(path, robot, 'both', model, alpha))
             buttons_to_add.append(btn)
             
