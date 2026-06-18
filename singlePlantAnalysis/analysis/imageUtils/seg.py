@@ -245,6 +245,17 @@ def extract_hypocotyl_length(multi_class_mask):
 
     filtered_mask = cv2.bitwise_and(component_mask, binary_mask.copy())
 
+    # Absorb class>=5 pixels (e.g. leaf/cotyledon misclassifications) that fall
+    # within 30px of the accepted hypocotyl structure. This recovers hypocotyl
+    # segments the model mislabeled as another class without pulling in distant
+    # leaf pixels.
+    extra_mask = (multi_class_mask >= 5).astype(np.uint8) * 255
+    if np.any(extra_mask):
+        absorb_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (61, 61))
+        expanded_region = cv2.dilate(component_mask, absorb_kernel)
+        absorbed = cv2.bitwise_and(expanded_region, extra_mask)
+        filtered_mask = cv2.bitwise_or(filtered_mask, absorbed)
+
     roi_slice, offset = get_roi_bounding_box(filtered_mask)
     
     if roi_slice is None:
