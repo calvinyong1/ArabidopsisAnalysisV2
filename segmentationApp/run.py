@@ -282,7 +282,7 @@ class nnUNetMonitorUI(QMainWindow):
         self.robot_filter.currentTextChanged.connect(self.update_table)
         
         self.status_filter = QComboBox()
-        self.status_filter.addItems(["All Status", "Not Started", "Not Aligned", "Partially Aligned",
+        self.status_filter.addItems(["All Status", "Not Started",
                                     "Queued", "Segmenting", "Stalled", "Segmented", "Postprocessing",
                                     "Complete", "Different Alpha", "Different Model", "Error"])
         self.status_filter.currentTextChanged.connect(self.update_table)
@@ -547,13 +547,7 @@ class nnUNetMonitorUI(QMainWindow):
                 data['seg_progress'] = int((seg_count / data['total_images']) * 100)
                 data['post_progress'] = 0.0
             else:
-                aligned_count, source_count = self._check_alignment(folder_path)
-                if source_count > 0 and aligned_count == 0:
-                    data['status'] = 'Not Aligned'
-                elif source_count > 0 and aligned_count < source_count:
-                    data['status'] = 'Partially Aligned'
-                else:
-                    data['status'] = 'Not Started'
+                data['status'] = 'Not Started'
 
         return data
 
@@ -601,8 +595,6 @@ class nnUNetMonitorUI(QMainWindow):
                 'Error (Post)': QColor(255, 200, 200),
                 'Incomplete (Legacy)': QColor(255, 220, 180),
                 'No Images': QColor(240, 240, 240),
-                'Not Aligned': QColor(255, 190, 180),
-                'Partially Aligned': QColor(255, 225, 185),
             }
 
             for row, data in enumerate(filtered_rows):
@@ -730,24 +722,6 @@ class nnUNetMonitorUI(QMainWindow):
             btn.clicked.connect(lambda: self.add_to_queue(path, robot, 'both', model, alpha))
             buttons_to_add.append(btn)
 
-        # SCENARIO: Not Aligned — block with informative label
-        elif status == 'Not Aligned':
-            lbl = QLabel("Run Image Aligner first")
-            lbl.setAlignment(Qt.AlignCenter)
-            lbl.setStyleSheet("color: #b71c1c; font-style: italic;")
-            self.table.setItem(row, 7, None)
-            self.table.setCellWidget(row, 7, lbl)
-            return
-
-        # SCENARIO: Partially Aligned — allow start (queue guard shows a confirmation)
-        elif status == 'Partially Aligned':
-            btn = QPushButton("Start Pipeline")
-            btn.setToolTip("Some images are unaligned — you will be asked to confirm before starting")
-            btn.setFixedSize(225, 25)
-            btn.setStyleSheet("QPushButton { background-color: #FF8C00; color: white; font-weight: bold;}")
-            btn.clicked.connect(lambda: self.add_to_queue(path, robot, 'both', model, alpha))
-            buttons_to_add.append(btn)
-            
         # SCENARIO: Error in Segmentation, allow full rerun or resume
         elif status == 'Error (Seg)':
             btn_full = QPushButton("Restart Pipeline")

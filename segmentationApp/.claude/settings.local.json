@@ -3,7 +3,8 @@
     "allow": [
       "Bash(python *)",
       "Bash(conda env *)",
-      "Bash(conda run *)"
+      "Bash(conda run *)",
+      "Bash(/opt/miniconda3/envs/ChronoRoot/bin/python3 *)"
     ]
   }
 }

@@ -9,8 +9,9 @@
         "seed": 3,
         "hypocotil": 4,
         "leaf": 5,
-        "petiole": 6
+        "petiole": 6,
+        "ignore": 7
     },
-    "numTraining": 797,
+    "numTraining": 937,
     "file_ending": ".png"
 }
