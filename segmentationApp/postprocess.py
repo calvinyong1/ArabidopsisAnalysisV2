@@ -197,7 +197,7 @@ def postprocess(path, method="arabidopsis", alpha=None, num_classes=7, seg_path=
             
             # Temporal postprocessing
             accum[0] = ensemble[0]
-            accum[1:] = float(alpha) * accum[1:] + dilated_ensemble[1:]
+            accum[1:] = float(alpha) * accum[1:] + (1 - float(alpha)) * dilated_ensemble[1:]
             segmentation_class = np.argmax(accum, axis=0)
             
             # Binary mask with morphological closing
@@ -213,7 +213,10 @@ def postprocess(path, method="arabidopsis", alpha=None, num_classes=7, seg_path=
             accum[0] = ensemble[0]
             
             # Accumulate 
-            accum[1:] = float(alpha) * accum[1:] + ensemble[1:]
+            accum[1:] = float(alpha) * accum[1:] + (1 - float(alpha)) * ensemble[1:]
+            
+            # Old EMA
+            # accum[1:] = float(alpha) * accum[1:] + ensemble[1:]
             
             segmentation = np.argmax(accum, axis=0)
         

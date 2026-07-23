@@ -2,4 +2,3 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
-segmentationApp/backup_nodel_weight/checkpoint_final.pth

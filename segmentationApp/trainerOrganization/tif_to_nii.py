@@ -17,7 +17,9 @@ def convert_tif_to_nii(input_dir: str) -> None:
         img = tifffile.imread(tif_path)
 
         nii_img = nib.Nifti1Image(img.T, affine=np.eye(4))
-        out_path = os.path.join(input_dir, filename.replace('.tif', '.nii.gz'))
+        name,ext = os.path.splitext(os.path.join(input_dir,filename))
+        out_path = f"{name}_img{ext}"
+        out_path = out_path.replace(".tif",".nii.gz")
         nib.save(nii_img, out_path)
         print(f"Saved: {out_path}")
 

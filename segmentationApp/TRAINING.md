@@ -15,6 +15,12 @@ leaf (class 5) instead of hypocotyl (class 4).
 | Hypocotyl | 4 | Yellow |
 | Leaf | 5 | Purple |
 | Petiole | 6 | Purple |
+| Ignore | 7 | — |
+
+`Ignore` (7) is nnUNet's ignore label — paint it over pixels you want excluded from
+the training loss (e.g. ambiguous/uncertain regions), rather than forcing them into
+one of the real classes. It's already declared in `dataset.json`'s `labels` block
+(`"ignore": 7`) for `Dataset789_ChronoRoot2`.
 
 ## Prerequisites
 
@@ -74,8 +80,12 @@ the rest of the image.
 Use the ChronoRoot Jupyter notebooks (`trainerOrganization/`) to:
 - Convert corrected NIfTI masks back to PNG
 - Name the new cases following nnUNet convention, continuing from the current
-  dataset's `numTraining` count (937 as of the last update — check
-  `dataset.json` for the current value before picking a starting number):
+  dataset's highest existing case number. **Case numbering is 0-indexed**
+  (`numTraining: 937` means cases run `Case0`–`Case936`, not `Case1`–`Case937`) —
+  don't derive the next case number from `numTraining` by adding 1; check the
+  actual highest filename in `labelsTr/` instead (e.g. `ls labelsTr | sed
+  's/Case//;s/\.png//' | sort -n | tail -1`). `corrected_to_nnunet_cases.py`'s
+  `--start-case` default is stale — always pass it explicitly:
   - Image: `Case937_0000.png`, `Case938_0000.png`, ...
   - Mask:  `Case937.png`, `Case938.png`, ...
 - Copy the new files into `nnUNet_raw/Dataset789_ChronoRoot2/imagesTr/` and `labelsTr/`
@@ -142,6 +152,20 @@ means fold 0's validation loss won't tell you whether the specific correction is
 generalizing — it only reflects overfitting on the broader base dataset. Verify the
 fix worked by visually inspecting predictions on held-out misclassification frames
 after training, rather than relying on the validation loss curve alone.
+
+**Alternative — hold out one correction video for validation.** Instead of forcing
+*all* new cases into training, you can hold out the new cases from one source video
+(e.g. all of "plate2"'s corrected frames) as fold 0's validation set, and force only
+the rest into training. This does let fold 0's validation Dice reflect whether the
+correction generalizes, at the cost of that held-out video's corrections not
+directly influencing the trained weights. Use `case_mapping.json` (case ID → source
+filename) to pick which cases belong to the video you want held out.
+
+**Only building fold 0?** Since `nnUNet_wrapper.py` only ever loads fold 0, if
+you're not training the other 4 folds there's no need to run the script above across
+all 5 — just edit fold 0 of the existing `splits_final.json` (add the forced-train
+cases to `folds[0]['train']` and any held-out cases to `folds[0]['val']`) and leave
+folds 1–4 untouched.
 
 ## Step 7 — Transfer Files to the VM
 
