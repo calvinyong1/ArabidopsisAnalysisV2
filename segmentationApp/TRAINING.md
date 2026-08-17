@@ -29,6 +29,45 @@ one of the real classes. It's already declared in `dataset.json`'s `labels` bloc
 - The ChronoRoot Jupyter notebooks for dataset organization
 - Original dataset downloaded from HuggingFace (see below)
 
+## Training Preparation Overview
+
+Three things have to happen before any `nnUNetv2_train` command can run — this is
+the high-level shape of it; the numbered steps below (and the "Full Retrain from
+Scratch" section) cover each part in full detail for this project's specific
+workflows.
+
+**1. Format conversion & aggregation.** Use `trainerOrganization/`'s notebooks
+(`CreateArabidopsisDataset.ipynb`, `CreateTomatoDataset.ipynb`) or the standalone
+`build_base_dataset.py` script to aggregate your expert-annotated Robot/Camera
+folders and rename them into nnU-Net's case convention — for this project that's
+`{CASE_ID}_0000.png` (image) and `{CASE_ID}.png` (mask), **not** `.nii.gz` —
+`dataset.json` declares `"file_ending": ".png"`. `.nii.gz` only appears
+transiently, as the format ITK-SNAP needs for manual mask editing (Step 4), not
+the format nnU-Net actually trains on. Move the renamed files into `imagesTr`
+and `labelsTr`. See Step 5 below for adding incremental correction cases to an
+existing dataset, or "Full Retrain from Scratch" for building one from a fresh
+download.
+
+**2. `dataset.json`.** Must be prepared manually in `nnUNet_raw/DatasetXXX/`.
+Copy the matching template from `trainerOrganization/` —
+`dataset_Arabidopsis.json` or `dataset_Tomato.json` (capitalized, matching the
+actual filenames in this repo) — rename the copy to `dataset.json`, and update
+`numTraining` to match your actual case count. This template-copy path applies
+when starting a dataset from scratch ("Full Retrain from Scratch" below); the
+incremental fine-tuning workflow (Step 5) instead updates `numTraining` in
+place on the dataset's existing `dataset.json`.
+
+**3. Data splitting.** To prevent the model from memorizing plate geometry
+instead of learning to generalize, cases must be grouped so frames from the
+same video never end up split across train and validation. The dataset-creation
+notebook does this by grouping images by their source folder (video/category),
+forcing certain folders — e.g. any tagged `MultipleVids` — into training, and
+generating a `splits_final.json`. **This file must be manually copied** to
+`nnUNet_preprocessed/DatasetXXX/splits_final.json` before training starts —
+nnU-Net does not do this for you, and without it silently auto-generates its own
+random split instead (see Step 6 below for why that's a problem specifically
+when adding correction cases, and how to force them into training deliberately).
+
 ## Step 1 — Download the Original Training Dataset
 
 The full annotated dataset (911 Arabidopsis cases) is available on HuggingFace.

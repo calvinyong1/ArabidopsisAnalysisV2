@@ -29,9 +29,14 @@ if ! command -v hf &> /dev/null; then
     fi
 fi
 
-echo -e "${BLUE}[STATUS]${NC} Scanning Hugging Face for models by author 'ngaggion'..."
+echo -e "${BLUE}[STATUS]${NC} Downloading fine-tuned Arabidopsis model..."
 
-# 3. Fetch Repos
+# 3a. Fine-tuned Arabidopsis model (own repo, replaces the ngaggion original)
+hf download "calvinyong1/arabidopsis-segmentation-model" --local-dir "$MODELS_DIR/Arabidopsis"
+
+echo -e "\n${BLUE}[STATUS]${NC} Scanning Hugging Face for other models by author 'ngaggion'..."
+
+# 3b. Fetch remaining Repos (e.g. Tomato)
 # We capture stderr (2>&1) to print the error message if the connection fails
 if ! RAW_OUTPUT=$(hf models ls --author "ngaggion" 2>&1); then
     echo -e "${RED}[ERROR]${NC} Failed to connect to Hugging Face."
@@ -39,11 +44,11 @@ if ! RAW_OUTPUT=$(hf models ls --author "ngaggion" 2>&1); then
     exit 1
 fi
 
-REPOS=($(echo "$RAW_OUTPUT" | grep -o "ngaggion/ChronoRoot2-[^\",]*"))
+REPOS=($(echo "$RAW_OUTPUT" | grep -o "ngaggion/ChronoRoot2-[^\",]*" | grep -v "ngaggion/ChronoRoot2-Arabidopsis"))
 
 if [ ${#REPOS[@]} -eq 0 ]; then
-    echo -e "${YELLOW}[!]${NC} No models found matching 'ngaggion/ChronoRoot2-'."
-    exit 1
+    echo -e "${YELLOW}[!]${NC} No other models found matching 'ngaggion/ChronoRoot2-'."
+    exit 0
 fi
 
 echo -e "${GREEN}[OK]${NC} Found ${#REPOS[@]} matching models."

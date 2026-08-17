@@ -171,11 +171,11 @@ def dataWork(conf, pfile, folder, N_exp = None, debug=False, time_tolerance=0.5)
             if hypocotylLength[t-space] == 0 and hypocotylLength[t] == 0:
                 hypocotylLength[:t] = 0
     
-    # Smooth
-    mainRoot = signal.medfilt(mainRoot, 9) 
-    lateralRoots = signal.medfilt(lateralRoots, 9) 
-    numlateralRoots = signal.medfilt(numlateralRoots, 9)
-    hypocotylLength = signal.medfilt(hypocotylLength, 9)
+    # Smooth (shrinking window at the edges avoids fabricating padded values)
+    mainRoot = pd.Series(mainRoot).rolling(window=9, center=True, min_periods=1).median().to_numpy()
+    lateralRoots = pd.Series(lateralRoots).rolling(window=9, center=True, min_periods=1).median().to_numpy()
+    numlateralRoots = pd.Series(numlateralRoots).rolling(window=9, center=True, min_periods=1).median().to_numpy()
+    hypocotylLength = pd.Series(hypocotylLength).rolling(window=9, center=True, min_periods=1).median().to_numpy()
 
     # Check that the values never decrease
     for i in range(1, len(mainRoot)):
@@ -236,10 +236,11 @@ def dataWork(conf, pfile, folder, N_exp = None, debug=False, time_tolerance=0.5)
     
     # --- USE DYNAMIC ALIAS HERE (e.g., '60min' or '60T') ---
     hour_data = data.resample(f'60{FREQ_MIN}', origin=reference_timestamp).mean()
+    hour_data = hour_data.interpolate(method='linear')
     
     # Handle N_exp for hourly data
     if N_exp is not None:
-        expected_hour_count = (N_exp + 3) // 4
+        expected_hour_count = (N_exp - 1) * timeStep // 60 + 1 # CHANGED: correct forumula for expected hour count of the experiment
         
         if len(hour_data) < expected_hour_count:
             missing_hours = expected_hour_count - len(hour_data)
