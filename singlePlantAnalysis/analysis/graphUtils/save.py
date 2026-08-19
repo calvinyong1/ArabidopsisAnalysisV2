@@ -98,8 +98,9 @@ def saveProps(image_name, frame_number, graph, csv_writer, number_lateral_roots,
             hypocotyl_length
         ]
     else:
-        # No valid graph - write zeros
-        row = [image_name, frame_number, 0, 0, 0, 0, 0]
+        # No valid root graph - root/lateral lengths are unknown, but hypocotyl
+        # length and lateral count may still have been measured independently
+        row = [image_name, frame_number, 0, 0, number_lateral_roots, 0, hypocotyl_length]
     
     csv_writer.writerow(row)
     return

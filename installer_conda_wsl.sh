@@ -23,7 +23,7 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 
 # --- Configuration ---
-REPO_URL="https://github.com/ngaggion/ChronoRoot2.git"
+REPO_URL="https://github.com/calvinyong1/ArabidopsisAnalysisV2.git"
 DEFAULT_INSTALL_DIR="$HOME/.local/chronoroot"
 
 main() {
@@ -136,6 +136,19 @@ main() {
         conda env create -n "$ENV_NAME" -f "$ENV_FILE"
     fi
 
+    # Verify GPU is actually usable by torch (nvidia-smi only proves a GPU
+    # exists, not that pip resolved a matching CUDA-enabled torch build)
+    if [ "$HAS_GPU" = true ] && [ "$INSTALL_SEG_GUI" = true ]; then
+        print_status "Verifying GPU is usable by PyTorch..."
+        if conda run --no-capture-output -n "$ENV_NAME" python -c "import torch; exit(0 if torch.cuda.is_available() else 1)" > /dev/null 2>&1; then
+            print_success "PyTorch can see the GPU."
+        else
+            print_warning "PyTorch cannot access the GPU (torch.cuda.is_available() is False)."
+            print_warning "Segmentation will silently fall back to CPU and run much slower."
+            print_warning "Check your NVIDIA driver / WSL2 GPU passthrough setup."
+        fi
+    fi
+
     # 6. Download Weights (Only if Full Node)
     if [ "$DOWNLOAD_WEIGHTS" = true ]; then
         section_title "7. Downloading Segmentation Weights"
@@ -230,8 +243,7 @@ EOF
     }
 
     # Generate Shortcuts
-    create_wsl_shortcut "ChronoRootApp" "chronoRootApp" "logo.ico"
-    create_wsl_shortcut "ChronoRootScreening" "chronoRootScreeningApp" "logo_screening.ico"
+    create_wsl_shortcut "ChronoRootAnalysis" "singlePlantAnalysis" "logo.ico"
     create_wsl_shortcut "ChronoRootImageAligner" "imageAligner" "logo.ico"
 
     # Conditional Segmentation Shortcut

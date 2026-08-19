@@ -55,6 +55,48 @@ Applied to `mainRoot`, `lateralRoots`, `numlateralRoots`, and `hypocotylLength`
 (lines ~175-178). The `medfilt(..., 5)` calls used for `MainOverTotal`,
 `LateralDensity`, and `DiscreteLateralDensity` were left unchanged.
 
+## `analysis/plantAnalysis.py` / `analysis/graphUtils/save.py` — 2026-08-19
+
+### 3. Fixed `HypocotylLength` being discarded whenever the root graph wasn't valid yet
+
+**Symptom:** `Results_raw.csv` reported `HypocotylLength = 0` on early frames
+where the segmentation mask visibly showed hypocotyl growth, whenever the main
+root hadn't been detected/tracked yet. Confirmed empirically against real masks
+(`experiment_20260707_092606_Output/.../plant_2/Results_0/`) — frames 11-18 had
+real, growing hypocotyl lengths (1px → 22px) computed correctly by the
+pipeline, but recorded as `0`.
+
+**Cause:** `plantAnalysis.py`'s Phase 1 loop ("Find first frame with valid root
+structure") computes `hypocotyl_length` independently each frame (a separate
+class-4-mask routine, unrelated to root graph success), but every early-return
+path in the loop — `not found_root`, `not is_valid_skeleton`, the
+`extract_root_segmentation` exception handler, and the `graphInit`/`createTree`
+exception handler — hardcoded `saveProps(..., 0, 0)`, discarding the
+already-computed value. `graphUtils/save.py`'s `saveProps()` reinforced this by
+writing a literal all-zero row whenever `graph=False`, ignoring whatever
+hypocotyl value was passed in. Zeroing `MainRootLength`/`LateralRootsLength`
+during this search is intentional and correct (tracking can't begin before a
+root structure exists) — only the hypocotyl discard was a bug.
+
+**Fix:**
+- `plantAnalysis.py`: initialize `hypocotyl_length = 0` at the top of each
+  Phase 1 loop iteration (so a genuinely failed frame still defaults safely,
+  without carrying over a stale value from a previous frame), and pass the
+  real `hypocotyl_length` through at all four early-return `saveProps()` calls
+  instead of hardcoding `0`.
+- `graphUtils/save.py`: `saveProps()`'s no-graph branch now writes
+  `[image_name, frame_number, 0, 0, number_lateral_roots, 0, hypocotyl_length]`
+  instead of an all-zero row — root/lateral lengths correctly stay `0` (no
+  graph to derive them from), but the independently-measured hypocotyl length
+  and lateral count now survive.
+
+**Effect:** frames can now correctly show `HypocotylLength > 0` while
+`MainRootLength = 0`, reflecting that hypocotyl elongation and root emergence
+are separate biological events that don't have to start at the same time.
+Early-experiment growth curves will look different (hypocotyl growth appears
+several frames earlier) than before this fix — this is a correction, not a
+regression.
+
 ## Known remaining issue (not yet fixed)
 
 `PostProcess_Hour.csv` still has `NaN` in 2 of every 3 hourly rows whenever the

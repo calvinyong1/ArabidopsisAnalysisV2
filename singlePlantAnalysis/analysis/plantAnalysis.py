@@ -118,35 +118,39 @@ def plantAnalysis(conf, replicate=False):
         
         for frame_idx in range(total_frames):
             print(f'Checking frame {frame_idx + 1} of {total_frames}', end='\r')
-            
+
+            # Reset each iteration: only trust a non-zero value if extract_root_segmentation
+            # actually completes for this frame (below), not a stale value from a prior frame.
+            hypocotyl_length = 0
+
             # Try to extract root segmentation
             try:
                 root_mask, hypocotyl_skeleton, hypocotyl_length, found_root, mc_filtered_mask = extract_root_segmentation(
-                    segmentation_paths[frame_idx], 
-                    roi_bounds, 
+                    segmentation_paths[frame_idx],
+                    roi_bounds,
                     current_root_base,
                     fixed_seed_position
                 )
-                
+
                 if not found_root:
                     frame_name = getImgName(images[frame_idx], conf)
-                    saveProps(frame_name, frame_idx, False, csv_writer, 0, 0)
+                    saveProps(frame_name, frame_idx, False, csv_writer, 0, hypocotyl_length)
                     saveImages(conf, images, frame_idx, root_mask, None, None, None)
                     frame_errors.append(0)
                     continue
-                
+
                 # Try to extract skeleton structure
                 skeleton, branch_points, end_points, is_valid_skeleton = extract_skeleton(root_mask)
-                                
+
                 if not is_valid_skeleton:
                     frame_name = getImgName(images[frame_idx], conf)
-                    saveProps(frame_name, frame_idx, False, csv_writer, 0, 0)
+                    saveProps(frame_name, frame_idx, False, csv_writer, 0, hypocotyl_length)
                     saveImages(conf, images, frame_idx, root_mask, None, None, None)
                     frame_errors.append(0)
                     continue
             except Exception as e:
                 frame_name = getImgName(images[frame_idx], conf)
-                saveProps(frame_name, frame_idx, False, csv_writer, 0, 0)
+                saveProps(frame_name, frame_idx, False, csv_writer, 0, hypocotyl_length)
                 saveImages(conf, images, frame_idx, root_mask, None, None, None)
                 frame_errors.append(0)
                 continue
@@ -166,7 +170,7 @@ def plantAnalysis(conf, replicate=False):
                 rsml_tree, lateral_root_count = createTree(conf, frame_idx, images, graph, skeleton, skeleton_overlay)
             except Exception as e:
                 frame_name = getImgName(images[frame_idx], conf)
-                saveProps(frame_name, frame_idx, False, csv_writer, 0, 0)
+                saveProps(frame_name, frame_idx, False, csv_writer, 0, hypocotyl_length)
                 saveImages(conf, images, frame_idx, root_mask, None, None, None)
                 frame_errors.append(0)
                 continue
