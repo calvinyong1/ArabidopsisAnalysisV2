@@ -106,7 +106,7 @@ def extract_root_segmentation(segmentation_path, roi_bounds, current_root_base, 
     multi_class_mask = cv2.imread(segmentation_path, 0)[roi_bounds[0]:roi_bounds[1], roi_bounds[2]:roi_bounds[3]]
     
     # Extract hypocotyl length
-    hypocotyl_skeleton, hypocotyl_length = extract_hypocotyl_length(multi_class_mask)
+    hypocotyl_skeleton, hypocotyl_length = extract_hypocotyl_length(multi_class_mask, fixed_seed_position)
     
     # Remove anything above the original seed point (not part of root)
     multi_class_mask[0:fixed_seed_position[1], :] = 0
@@ -175,43 +175,62 @@ def extract_root_segmentation(segmentation_path, roi_bounds, current_root_base, 
     # No component found near root base
     return binary_mask, hypocotyl_skeleton, hypocotyl_length, False, binary_mask
 
-def extract_hypocotyl_length(multi_class_mask):
+def extract_hypocotyl_length(multi_class_mask, root_origin):
     # Filter Mask for Hypocotyls (Class 4)
-    binary_mask = (multi_class_mask == 4) 
+    binary_mask = (multi_class_mask == 4)
     binary_mask = np.array(binary_mask, dtype='uint8') * 255
-    
+
     morph_kernel_size = 5
     morph_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (morph_kernel_size, morph_kernel_size))
     binary_mask = cv2.dilate(binary_mask, morph_kernel)
     binary_mask = cv2.erode(binary_mask, morph_kernel)
-    
+
     morph_kernel_size = 3
     morph_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (morph_kernel_size, morph_kernel_size))
     binary_mask = cv2.erode(binary_mask, morph_kernel)
     binary_mask = cv2.dilate(binary_mask, morph_kernel)
-    
+
     connected_components, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
+
     # Pre-calculate Area and BoundingRect for valid components only
     components_data = []
     for comp in connected_components:
         area = cv2.contourArea(comp)
-        if area > 30: 
+        if area > 30:
             rect = cv2.boundingRect(comp)
             components_data.append((area, comp, rect))
-    
+
     if not components_data:
         return np.zeros_like(binary_mask), 0
-    
+
     # Sort: Largest area first
     components_data.sort(key=lambda x: x[0], reverse=True)
-    
+
+    # Anchor on the component closest to this plant's root origin instead of
+    # just the largest blob in the ROI. A rectangular ROI can be forced to
+    # include a neighboring plant's hypocotyl (e.g. when this plant's root
+    # grows diagonally far enough that the ROI must widen to cover it) -
+    # anchoring on proximity to the known seed avoids picking up that
+    # neighbor just because its hypocotyl blob happens to be larger.
+    origin_pt = (int(root_origin[0]), int(root_origin[1]))
+    anchor_index = 0
+    best_distance = None
+    for i, (area, comp, rect) in enumerate(components_data):
+        contains_origin = cv2.pointPolygonTest(comp, origin_pt, False) > 0
+        distance = 0 if contains_origin else abs(cv2.pointPolygonTest(comp, origin_pt, True))
+        if best_distance is None or distance < best_distance:
+            best_distance = distance
+            anchor_index = i
+
+    if anchor_index != 0:
+        components_data.insert(0, components_data.pop(anchor_index))
+
     component_mask = np.zeros(binary_mask.shape, np.uint8)
-    accepted_rects = [] 
-    GAP_THRESHOLD = 100 
-    
+    accepted_rects = []
+    GAP_THRESHOLD = 100
+
     for i, (_, component, rect) in enumerate(components_data):
-        # Always keep the largest component (Index 0)
+        # Always keep the anchor (index 0: closest to the root origin)
         if i == 0:
             cv2.drawContours(component_mask, [component], -1, 255, -1)
             accepted_rects.append(rect)
