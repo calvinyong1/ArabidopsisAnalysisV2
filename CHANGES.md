@@ -1,4 +1,117 @@
-# Changes — 2026-07-23
+# Changes — 2026-09-03
+
+## `analysis/imageUtils/seg.py`
+
+### 1. Added a hard horizontal-distance gate to hypocotyl component selection
+
+**Symptom:** When two plants' hypocotyls both fall inside one plant's ROI
+(rectangular ROI forced wide by e.g. a diagonally-growing root), the neighbor's
+hypocotyl could get tracked as this plant's own — specifically when the
+neighbor's hypocotyl becomes a valid, trackable blob *before* this plant's own
+hypocotyl does. At that point the only candidate component in the ROI belongs
+to the neighbor.
+
+**Cause:** `extract_hypocotyl_length()`'s anchor selection (added in an earlier
+session to fix largest-blob-wins picking the wrong plant) always picked
+whichever component was *closest* to `fixed_seed_position`, with no rejection
+threshold — unlike the sibling root-selection code in
+`extract_root_segmentation()`, which already had one (`distance_to_root_base <
+100`, falling back to `found_root=False` otherwise). So if this plant had no
+hypocotyl blob yet, the neighbor's blob — the only one present — was accepted
+regardless of how far away it actually was.
+
+**Fix:** Replaced the Euclidean `cv2.pointPolygonTest` distance used for
+anchor scoring with a horizontal-only distance (candidate bounding-rect vs.
+`root_origin`'s x-coordinate), and added a hard cutoff
+`max_horizontal_distance=80` (a new keyword arg on `extract_hypocotyl_length`,
+default `80`). If the closest candidate is farther than that, the function now
+returns `(zeros, 0)` — no hypocotyl detected — instead of forcing a pick.
+
+Horizontal-only distance was chosen over Euclidean because plants are plated
+in a row (measured minimum seed spacing ~170px) and a hypocotyl grows
+vertically from its own seed: neighboring plants separate cleanly on the
+x-axis, while a real hypocotyl can legitimately sit far away in y once it's
+tall. `80` = half of the ~170px minimum spacing, minus a small margin for
+blob width.
+
+**Known residual risk (not fixed):** the stitching step just below the anchor
+check (`GAP_THRESHOLD = 100` in the same function) that grows the accepted
+mask outward from the anchor is still a full 2D gap check, not horizontally
+scoped. If a real hypocotyl is accepted as anchor near the 80px edge, and a
+neighbor's blob sits within a 100px 2D gap of it, stitching could still pull
+in a sliver of the neighbor's hypocotyl. Narrower/less likely than the bug
+this fix addresses; left alone rather than tightened blind. Revisit only if
+seen in production data.
+
+**How to revert if this proves error-prone in testing:** in
+`extract_hypocotyl_length()`, restore the previous signature (drop the
+`max_horizontal_distance=80` parameter) and replace the anchor-selection block
+with:
+
+```python
+origin_pt = (int(root_origin[0]), int(root_origin[1]))
+anchor_index = 0
+best_distance = None
+for i, (area, comp, rect) in enumerate(components_data):
+    contains_origin = cv2.pointPolygonTest(comp, origin_pt, False) > 0
+    distance = 0 if contains_origin else abs(cv2.pointPolygonTest(comp, origin_pt, True))
+    if best_distance is None or distance < best_distance:
+        best_distance = distance
+        anchor_index = i
+
+if anchor_index != 0:
+    components_data.insert(0, components_data.pop(anchor_index))
+```
+
+This restores "always pick nearest available, no rejection" behavior (still
+proximity-anchored, just without the horizontal-only metric or the hard
+cutoff). Alternatively, `git log -- singlePlantAnalysis/analysis/imageUtils/seg.py`
+and revert this specific commit.
+
+# Changes — 2026-08-24
+
+## `environment.yml` / `environment_no_nnunet.yml`, `singlePlantAnalysis/3_generateReport.py`
+
+### Fixed report generation crashing entirely on fresh installs due to an unpinned `multimethod` regression
+
+**Symptom:** A user on a freshly-installed WSL environment ran `3_generateReport.py`
+and it crashed immediately at import time, before doing anything:
+
+```
+TypeError: metaclass conflict: the metaclass of a derived class must be a
+(non-strict) subclass of the metaclasses of all its bases
+```
+
+with the traceback rooted in `skfda`'s `Identity` operator registering
+`gram_matrix_optimization` via `multimethod`.
+
+**Cause:** `environment.yml` pins `scikit-fda=0.10.1` (released April 2025) but
+never pins its transitive dependency `multimethod`. `scikit-fda`'s own metadata
+only excludes `multimethod==1.11`/`1.11.1` (an older, unrelated bug fixed in
+Feb 2024) — it has no upper bound. `multimethod==2.0.2` (Nov 2025) shipped a
+change ("Nested `subtype` allowed") that breaks `skfda`'s `Identity` operator
+registration with exactly this metaclass-conflict error. Any environment
+solved before Nov 2025 still resolves to an older, working `multimethod` and
+never sees this; any environment solved fresh today resolves to the latest
+release (`2.1` as of this writing) and crashes immediately.
+
+Compounding the impact: `3_generateReport.py` imported `performFPCA` from
+`analysis.fpca_analysis` unconditionally at the top of the file, even though
+FPCA only actually runs behind `if conf['doFPCA']:`. So the broken import took
+down report generation entirely — the temporal plots, convex hull analysis,
+Fourier plots, and lateral angle plots never ran either, even for configs with
+`doFPCA` disabled.
+
+**Fix:**
+- `environment.yml` / `environment_no_nnunet.yml`: added `multimethod<2.0.2` to
+  pin the solver to the last known-good release.
+- `3_generateReport.py`: moved `from analysis.fpca_analysis import performFPCA`
+  out of the top-level imports and into the `if conf['doFPCA']:` block, wrapped
+  in a `try/except` that logs and skips FPCA on failure instead of crashing —
+  so a broken/incompatible FPCA dependency can no longer take down the rest of
+  the report.
+
+
 
 ## `analysis/dataWork.py`
 

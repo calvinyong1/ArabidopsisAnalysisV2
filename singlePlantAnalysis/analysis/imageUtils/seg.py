@@ -175,7 +175,7 @@ def extract_root_segmentation(segmentation_path, roi_bounds, current_root_base, 
     # No component found near root base
     return binary_mask, hypocotyl_skeleton, hypocotyl_length, False, binary_mask
 
-def extract_hypocotyl_length(multi_class_mask, root_origin):
+def extract_hypocotyl_length(multi_class_mask, root_origin, max_horizontal_distance=80):
     # Filter Mask for Hypocotyls (Class 4)
     binary_mask = (multi_class_mask == 4)
     binary_mask = np.array(binary_mask, dtype='uint8') * 255
@@ -212,15 +212,35 @@ def extract_hypocotyl_length(multi_class_mask, root_origin):
     # grows diagonally far enough that the ROI must widen to cover it) -
     # anchoring on proximity to the known seed avoids picking up that
     # neighbor just because its hypocotyl blob happens to be larger.
-    origin_pt = (int(root_origin[0]), int(root_origin[1]))
-    anchor_index = 0
+    #
+    # Distance is measured horizontally only: plants are plated in a row
+    # (~170px minimum seed spacing) and a hypocotyl grows vertically from
+    # its own seed, so neighboring plants separate cleanly on the x-axis
+    # while a real hypocotyl can legitimately be far away in y once it's
+    # tall. max_horizontal_distance (80px) is half that minimum spacing
+    # minus a small margin for blob width - anything farther than that is
+    # on the far side of the midpoint to the next seed, i.e. not ours.
+    origin_x = int(root_origin[0])
+    anchor_index = None
     best_distance = None
     for i, (area, comp, rect) in enumerate(components_data):
-        contains_origin = cv2.pointPolygonTest(comp, origin_pt, False) > 0
-        distance = 0 if contains_origin else abs(cv2.pointPolygonTest(comp, origin_pt, True))
-        if best_distance is None or distance < best_distance:
-            best_distance = distance
+        x, _, w, _ = rect
+        if origin_x < x:
+            horizontal_distance = x - origin_x
+        elif origin_x > x + w:
+            horizontal_distance = origin_x - (x + w)
+        else:
+            horizontal_distance = 0
+        if best_distance is None or horizontal_distance < best_distance:
+            best_distance = horizontal_distance
             anchor_index = i
+
+    # This gates which whole component is trusted, not how far it can extend
+    # once accepted - a component's full extent (however far it stretches
+    # beyond 80px) is still counted in full. Intentional: as long as any part
+    # of the blob is within range of the seed, it's treated as this plant's.
+    if anchor_index is None or best_distance > max_horizontal_distance:
+        return np.zeros_like(binary_mask), 0
 
     if anchor_index != 0:
         components_data.insert(0, components_data.pop(anchor_index))

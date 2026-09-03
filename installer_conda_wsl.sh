@@ -61,6 +61,11 @@ main() {
     sudo apt-get install -y libzbar0
     print_success "libzbar installed."
 
+    print_status "Installing Qt/X11 libraries (required for the GUI to display under WSLg)..."
+    sudo apt-get install -y libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+        libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1 libxkbcommon-x11-0
+    print_success "Qt/X11 libraries installed."
+
     # 3. Setup Directory
     section_title "3. Directory Setup"
     read -p "Installation directory (Default: $DEFAULT_INSTALL_DIR): " user_install_dir

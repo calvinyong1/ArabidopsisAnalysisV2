@@ -20,7 +20,6 @@ from analysis.report import (
 
 from analysis.fourier_analysis import makeFourierPlots
 from analysis.lateral_angles import makeLateralAnglesPlots, plotLateralAnglesOnTop
-from analysis.fpca_analysis import performFPCA
 from analysis.utils.fileUtilities import convertToPathSafe, convertFromPathSafe
 
 if __name__ == "__main__":
@@ -172,7 +171,11 @@ if __name__ == "__main__":
     generateTableTemporal(conf, all_data)
     
     if conf['doFPCA']:
-        performFPCA(args.config)
+        try:
+            from analysis.fpca_analysis import performFPCA
+            performFPCA(args.config)
+        except Exception as e:
+            print(f"Skipping FPCA analysis due to error: {e}")
     
     if conf['doConvex'] and not convex_hull_df.empty:
         convex_hull_df.to_csv(os.path.join(reportPath, 'Convex_Hull_Data.csv'), index=False)

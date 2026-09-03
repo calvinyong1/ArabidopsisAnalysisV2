@@ -12,6 +12,7 @@ dependencies:
   - filterpy=1.4.5
   - lifelines=0.30.0
   - scikit-fda=0.10.1
+  - multimethod<2.0.2
   - scipy=1.16.3
   - pyzbar=0.1.9
   - pip
