@@ -11,6 +11,7 @@ uses `installer_conda_wsl.sh`, which sets up a Linux (Ubuntu) environment
 inside Windows via WSL2, installs the conda environment and dependencies, and
 creates native Windows shortcuts that launch the GUI apps.
 
+
 ## Before you start
 
 ArabidopsisAnalysisV2 ships three GUI apps — `imageAligner`, `segmentationApp`,
@@ -18,6 +19,8 @@ and `singlePlantAnalysis` — each with its own `run.py`. The installer scripts
 (`installer_conda_{wsl,linux,mac}.sh`) set up a conda environment and clone
 the repo into a dedicated install directory.
 
+
+## Prerequisites
 
 ### 1. Install WSL2 + Ubuntu (on Windows)
 
@@ -43,6 +46,7 @@ create your Linux username/password.
 **Windows version note:** WSLg ships by default on Windows 11 and on
 sufficiently updated Windows 10 (via Windows Update / `wsl --update`). If
 GUI windows fail to appear later, run `wsl --update` from PowerShell first.
+
 
 ### 2. NVIDIA GPU users — driver setup (Windows side, not inside WSL)
 
@@ -70,6 +74,7 @@ update the Windows driver and re-check before continuing — don't try to
 If you don't have a GPU, skip this — you can still install a CPU-only
 ("Lite Node") setup for analysis-only workflows.
 
+
 ### 3. Install Miniconda inside WSL
 
 Open your **Ubuntu (WSL)** terminal and run:
@@ -88,6 +93,7 @@ present — it will not install it for you.
 `git` normally ships with Ubuntu's WSL image already; if `git --version`
 fails, install it with `sudo apt-get install -y git`.
 
+
 ## Installation
 
 ### 4. Clone the repository
@@ -96,6 +102,7 @@ fails, install it with `sudo apt-get install -y git`.
 git clone https://github.com/calvinyong1/ArabidopsisAnalysisV2.git
 cd ArabidopsisAnalysisV2
 ```
+
 
 ### 5. Run the WSL installer
 
@@ -137,6 +144,7 @@ The script will:
     `cmd.exe`/`powershell.exe` from within WSL — this requires WSL/Windows
     interop, which is enabled by default and normally needs no action from
     you.
+
 
 ### 6. Launch the app
 
@@ -197,8 +205,9 @@ After install, the script checks `torch.cuda.is_available()` to confirm the
 right `torch` build was actually installed — not just that `nvidia-smi`
 reports a driver.
 
-## Re-running the installer
 
-The script is safe to run again later (e.g. to pick up updates): it detects
+## Updating the Application
+
+The script is safe to run again later to pick up application updates and latest model weights: it detects
 the existing clone and runs `git pull` instead of cloning fresh, and updates
 (rather than recreates) the existing `ChronoRoot` conda environment.
