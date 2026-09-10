@@ -1,0 +1,159 @@
+---
+layout: none
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArabidopsisAnalysisV2 — root &amp; hypocotyl phenotyping</title>
+<meta name="description" content="A maintained fork of ChronoRoot2 for Arabidopsis and tomato root/hypocotyl phenotyping from timelapse imaging.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="{{ '/' | relative_url }}">Arabidopsis<span>Analysis</span>V2</a>
+    <nav class="top">
+      <a href="#apps">Apps</a>
+      <a href="#changes">Changelog</a>
+      <a href="#docs">Docs</a>
+      <a href="https://github.com/{{ site.repository }}">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <h1>Root phenotyping,<br>tracked plant by plant.</h1>
+      <p class="lede">
+        A GUI pipeline for segmenting and measuring root and hypocotyl growth
+        from Arabidopsis and tomato timelapse plates — image alignment,
+        nnU-Net segmentation, and per-plant growth curves, end to end.
+      </p>
+      <p class="hero-meta">
+        Fork of <code>ngaggion/ChronoRoot2</code> &middot; maintained at
+        <code>calvinyong1/ArabidopsisAnalysisV2</code>
+      </p>
+      <div class="cta-row">
+        <a class="btn primary" href="{{ '/docs/install.html' | relative_url }}">Install guide</a>
+        <a class="btn ghost" href="https://github.com/{{ site.repository }}">View on GitHub</a>
+      </div>
+    </div>
+
+    <div class="chart-panel">
+      <div class="label">
+        <span>MainRootLength &amp; HypocotylLength</span>
+        <span>plate3 / plant_2</span>
+      </div>
+      <svg viewBox="0 0 460 240" role="img" aria-label="Example root and hypocotyl growth curves over time">
+        <line class="chart-grid" x1="0" y1="60" x2="460" y2="60"></line>
+        <line class="chart-grid" x1="0" y1="120" x2="460" y2="120"></line>
+        <line class="chart-grid" x1="0" y1="180" x2="460" y2="180"></line>
+        <path class="chart-line"
+          d="M10,210 C 60,205 90,195 120,178 C 160,155 190,140 220,118
+             C 260,92 300,80 340,58 C 380,40 410,28 450,18" />
+        <path class="chart-line secondary"
+          d="M10,220 C 50,218 80,214 110,205 C 150,192 180,182 220,168
+             C 260,152 300,142 340,128 C 380,116 410,108 450,96" />
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section class="apps" id="apps">
+  <div class="wrap">
+    <p class="section-head">Three GUI apps, each with its own run.py</p>
+    <div class="apps-grid">
+      <div class="app-card">
+        <h3>imageAligner</h3>
+        <p>Aligns raw plate timelapses frame to frame before segmentation. Falls back to an identity transform when a reference-frame marker can't be found, so one bad frame doesn't block the whole plate.</p>
+      </div>
+      <div class="app-card">
+        <h3>segmentationApp</h3>
+        <p>Runs nnU-Net inference over aligned frames — root, lateral root, hypocotyl, seed, leaf, and petiole classes — with GPU detection and a CPU fallback.</p>
+      </div>
+      <div class="app-card">
+        <h3>singlePlantAnalysis</h3>
+        <p>Turns segmentation masks into per-plant growth curves — main/lateral root length, lateral count, hypocotyl length — and generates the final report.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="changelog" id="changes">
+  <div class="wrap">
+    <p class="section-head">Recent fixes to the analysis pipeline</p>
+
+    <div class="entry">
+      <div class="date">2026-09-03</div>
+      <div>
+        <h4>Hypocotyl selection no longer borrows a neighboring plant's blob</h4>
+        <p>Added a horizontal-distance cutoff to hypocotyl component selection, so a neighbor's hypocotyl can no longer get picked just because it's the only trackable blob inside a wide ROI.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="date">2026-08-24</div>
+      <div>
+        <h4>Report generation no longer crashes on fresh installs</h4>
+        <p>Pinned a transitive dependency that had started breaking <code>scikit-fda</code> on solve, and made FPCA import failures non-fatal so the rest of the report still generates.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="date">2026-08-19</div>
+      <div>
+        <h4>Growth curves respect the real capture interval</h4>
+        <p>The hourly-resample reconciliation was hardcoded for a 15-minute capture interval, truncating charts at any other interval. It now derives expected row count from the configured <code>timeStep</code>.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="date">2026-08-19</div>
+      <div>
+        <h4>Hypocotyl length no longer zeroed before root detection</h4>
+        <p><code>HypocotylLength</code> was discarded to 0 on every frame where the root graph wasn't valid yet, even though it's computed independently. The real value now survives every early-return path.</p>
+      </div>
+    </div>
+
+    <p class="back-link"><a href="{{ '/changelog.html' | relative_url }}">Full changelog &rarr;</a></p>
+  </div>
+</section>
+
+<section class="docs-index" id="docs">
+  <div class="wrap">
+    <p class="section-head">Documentation</p>
+    <div class="docs-grid">
+      <a class="doc-card" href="{{ '/docs/install.html' | relative_url }}">
+        <h3>WSL / install guide</h3>
+        <p>Step-by-step setup for Windows via WSL, including the WSL1-vs-WSL2 GUI gotcha.</p>
+      </a>
+      <a class="doc-card" href="{{ '/docs/training.html' | relative_url }}">
+        <h3>Fine-tuning nnU-Net</h3>
+        <p>Dataset prep, splits, VM training, and checkpoint handling for the segmentation model.</p>
+      </a>
+      <a class="doc-card" href="{{ '/docs/architecture.html' | relative_url }}">
+        <h3>Architecture notes</h3>
+        <p>Seed position vs. root base, class labels, path structure, and how main/lateral classification actually works.</p>
+      </a>
+      <a class="doc-card" href="{{ '/changelog.html' | relative_url }}">
+        <h3>Full changelog</h3>
+        <p>The dated history of bug fixes applied to the analysis pipeline.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="wrap">
+    ArabidopsisAnalysisV2 &middot; fork of <a href="https://github.com/ngaggion/ChronoRoot2">ngaggion/ChronoRoot2</a> &middot; <a href="https://github.com/{{ site.repository }}">source</a>
+  </div>
+</footer>
+
+</body>
+</html>

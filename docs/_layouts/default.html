@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ page.title }} — {{ site.title }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="{{ '/' | relative_url }}">Arabidopsis<span>Analysis</span>V2</a>
+    <nav class="top">
+      <a href="{{ '/#apps' | relative_url }}">Apps</a>
+      <a href="{{ '/changelog.html' | relative_url }}">Changelog</a>
+      <a href="{{ '/#docs' | relative_url }}">Docs</a>
+      <a href="https://github.com/{{ site.repository }}">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<article class="doc-body">
+  <div class="wrap">
+    <p class="back-link"><a href="{{ '/#docs' | relative_url }}">&larr; All docs</a></p>
+    {{ content }}
+  </div>
+</article>
+
+<footer class="site">
+  <div class="wrap">
+    ArabidopsisAnalysisV2 &middot; fork of <a href="https://github.com/ngaggion/ChronoRoot2">ngaggion/ChronoRoot2</a> &middot; <a href="https://github.com/{{ site.repository }}">source</a>
+  </div>
+</footer>
+
+</body>
+</html>

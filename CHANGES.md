@@ -225,3 +225,135 @@ in `dataWork.py`:
 hour_data = data.resample(f'60{FREQ_MIN}', origin=reference_timestamp).mean()
 hour_data = hour_data.interpolate(method='linear').ffill().bfill()
 ```
+
+---
+
+*The entries below were backfilled on 2026-09-09 by auditing the full git
+history for fixes that were never written up here. They predate the entries
+above.*
+
+# Changes — 2026-08-19
+
+## `analysis/imageUtils/seg.py`
+
+### Fixed hypocotyl component selection picking a neighboring plant's larger blob over this plant's own
+
+**Symptom:** `extract_hypocotyl_length()` picked whichever class-4 connected
+component had the largest pixel area in the ROI, with no awareness of which
+plant it actually belonged to. Since ROI selection is forced rectangular, a
+diagonally-growing root could force the ROI wide enough to include a
+neighboring plant's hypocotyl — and if that neighbor's blob happened to be
+larger, it got selected as this plant's hypocotyl instead.
+
+**Cause:** component selection sorted candidates purely by
+`cv2.contourArea` and always accepted index 0 (largest), with no check
+against anything specific to this plant.
+
+**Fix:** `extract_hypocotyl_length()` gained a second parameter,
+`root_origin`, called with `fixed_seed_position` (not `current_root_base` —
+the seed position never changes for the whole analysis, so it's a stable
+per-plant anchor unaffected by any root-tracking drift/mistakes). Component
+selection now scores every candidate by proximity to `root_origin`
+(contains-point test first, else nearest-edge distance via
+`cv2.pointPolygonTest`) and promotes whichever component is closest to the
+seed to be the accepted anchor — mirroring the analogous pattern
+`extract_root_segmentation()` already used for root component selection.
+
+**Note:** this anchor selection had no rejection threshold — if this plant
+had no hypocotyl blob yet, the nearest *available* component (even a distant
+neighbor's) still got picked regardless of how far away it was. That gap is
+what the horizontal-distance-gate fix in the 2026-09-03 entry above
+addresses.
+
+# Changes — 2026-06-12
+
+## `analysis/utils/fileUtilities.py`, `run.py`, `2_postprocess.py`, `3_generateReport.py`
+
+### Removed a hardcoded RPI-module path segment that didn't match the pipeline's actual capture setup
+
+**Symptom:** `createSaveFolder()` always built a 4-level output structure —
+`Analysis/{experiment}/{rpi}/{cam}/{plant}/Results_N/`, with an extra `rpi`
+directory level between experiment and camera — regardless of whether the
+capture setup actually used multiple Raspberry Pi units. The corresponding
+path-parsing/lookup code in `run.py`, `2_postprocess.py`, and
+`3_generateReport.py` all assumed and reconstructed this same 4-level
+structure, so the fix had to be applied consistently across all of them.
+
+**Cause:** the path structure carried a multi-RPi-rig assumption that didn't
+match the pipeline's actual/current capture setup.
+
+**Fix:** dropped the `rpi` path segment entirely — `cam_path` is now built
+directly under the experiment's `id_path`
+(`Analysis/{experiment}/{cam}/{plant}/...`). Matching updates were made to
+every consumer of that path structure (`run.py`, `2_postprocess.py`,
+`3_generateReport.py`) so parsing and folder construction stay in agreement.
+
+**Note:** an earlier attempt at this same change (`a91ae07` "Removed RPI
+Module...") was fully reverted (`57cd635`) before this commit re-did it
+correctly and consistently — this is the version that stuck.
+
+## `imageAligner/run.py`, `segmentationApp/run.py`
+
+### Missing ArUco marker on the reference frame blocked the entire plate's alignment and segmentation
+
+**Symptom:** if the first frame of a plate's timelapse had no detectable
+ArUco marker, `AlignWorker` emitted a fatal `error` signal and stopped
+immediately — no aligned output was produced for that plate at all. Because
+segmentationApp's queue guard requires aligned output to exist before letting
+segmentation start, this blocked the whole plate's segmentation too, not just
+alignment.
+
+**Cause:** marker-detection failure on the reference frame was treated as
+unrecoverable, with no fallback path.
+
+**Fix:** `imageAligner/run.py` now downgrades this to a `warning` signal and
+falls back to copying the raw images through unaligned (identity transform)
+into the `aligned` output folder, so the rest of the pipeline can still
+proceed for that plate. `segmentationApp/run.py`'s queue-status logic gained
+`Not Aligned` / `Partially Aligned` states (with matching UI coloring, a
+blocking "Run Image Aligner first" prompt for the fully-unaligned case, and a
+confirm-before-start prompt for the partial case) so users can see and act on
+the alignment gap instead of the pipeline silently stalling.
+
+# Changes — 2026-05-19
+
+## `analysis/utils/fileUtilities.py` and callers, `segmentationApp/run.py`
+
+### Image discovery hardcoded to `.png` silently dropped `.tif`/`.tiff` experiments
+
+**Symptom:** `getImages()` globbed only `*.png`. Any experiment whose source
+capture images were `.tif`/`.tiff` returned zero images from this call, so
+the plant's raw images couldn't be located at all (falling through to a
+metadata-fallback path). `segmentationApp/run.py`'s queue monitor used the
+same `.png`-only glob for its image-count fallback and legacy
+Fold_0/Ensemble progress counters, so it under-reported progress or showed
+"No Images" for `.tif` experiments too.
+
+**Cause:** the file extension was hardcoded at both call sites instead of
+covering the actual set of capture formats in use.
+
+**Fix:** `fileUtilities.py` added `loadImageFiles()`, which globs `*.png`,
+`*.tif`, and `*.tiff` together (naturally sorted); `getImages()` and its
+metadata-fallback branch switched to it. `segmentationApp/run.py`'s
+image-count fallback and legacy progress counters were updated to sum all
+three extensions instead of `.png` alone.
+
+# Changes — 2026-04-16
+
+## `singlePlantAnalysis/run.py` (then `GUI/run.py`)
+
+### Blank plate/camera/plant/experiment-name fields corrupted output paths
+
+**Symptom:** the RPI/camera/plant/experiment-name Qt text fields were read
+directly into the config dict with no validation. A blank (or
+whitespace-only) field produced an empty string that fed straight into
+output-folder path construction (`createSaveFolder`) as a path
+segment/identifier.
+
+**Cause:** no default or sanitization was applied before these fields were
+used to build filesystem paths.
+
+**Fix:** each field now defaults to `"1"` when blank
+(`field.text().strip() or "1"`), and `editingFinished` handlers were added so
+a blank field self-corrects to `"1"` as soon as focus leaves it, not just at
+submit time.
