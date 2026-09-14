@@ -119,14 +119,18 @@ the rest of the image.
 Use the ChronoRoot Jupyter notebooks (`trainerOrganization/`) to:
 - Convert corrected NIfTI masks back to PNG
 - Name the new cases following nnUNet convention, continuing from the current
-  dataset's highest existing case number. **Case numbering is 0-indexed**
-  (`numTraining: 937` means cases run `Case0`–`Case936`, not `Case1`–`Case937`) —
-  don't derive the next case number from `numTraining` by adding 1; check the
-  actual highest filename in `labelsTr/` instead (e.g. `ls labelsTr | sed
-  's/Case//;s/\.png//' | sort -n | tail -1`). `corrected_to_nnunet_cases.py`'s
+  dataset's highest existing case number. Verified directly against the live
+  dataset (`Dataset789_ChronoRoot2/labelsTr`, `numTraining: 947`, no
+  `image_0.png` present): cases use the **`image_N` naming convention, not
+  `CaseN`**, and numbering is **1-indexed and contiguous** —
+  `numTraining: 947` means cases run `image_1`–`image_947`, so the next new
+  case is `image_948` (`numTraining + 1`). Still worth confirming against the
+  actual highest filename rather than trusting `numTraining` blindly, in case
+  a future dataset isn't perfectly contiguous (e.g. `ls labelsTr | sed
+  's/image_//;s/\.png//' | sort -n | tail -1`). `corrected_to_nnunet_cases.py`'s
   `--start-case` default is stale — always pass it explicitly:
-  - Image: `Case937_0000.png`, `Case938_0000.png`, ...
-  - Mask:  `Case937.png`, `Case938.png`, ...
+  - Image: `image_948_0000.png`, `image_949_0000.png`, ...
+  - Mask:  `image_948.png`, `image_949.png`, ...
 - Copy the new files into `nnUNet_raw/Dataset789_ChronoRoot2/imagesTr/` and `labelsTr/`
 - Update `numTraining` in `dataset.json` to reflect the new total
 
@@ -139,10 +143,12 @@ run happened. Without one, nnUNet auto-generates a random 5-fold split across
 correction cases could by chance land in fold 0's validation set instead of its
 training set — i.e. not actually influence the fine-tuned weights.
 
-To guarantee your correction cases are always trained on, generate a custom
-`splits_final.json` that forces them into every fold's training set, and only
-draws each fold's validation cases from the original base dataset. Run this
-**locally**, next to your `nnUNet_raw/Dataset789_ChronoRoot2` folder:
+This fine-tuning workflow only ever trains fold 0 (Step 10) — `nnUNet_wrapper.py`
+only ever loads fold 0 at inference — so `splits_final.json` only needs a single
+fold-0 entry, not the full 5-fold structure nnUNet's own tooling would normally
+generate. Generate one that forces your correction cases into fold 0's training
+set, holding out a slice of the original base dataset for fold 0's validation.
+Run this **locally**, next to your `nnUNet_raw/Dataset789_ChronoRoot2` folder:
 
 ```bash
 python3 -c "
@@ -152,12 +158,12 @@ dataset_dir = 'nnUNet_raw/Dataset789_ChronoRoot2'   # has case_mapping.json + la
 out_path = 'splits_final.json'
 
 case_mapping = json.load(open(os.path.join(dataset_dir, 'case_mapping.json')))
-new_cases = sorted(case_mapping.keys(), key=lambda c: int(c.replace('Case', '')))
+new_cases = sorted(case_mapping.keys(), key=lambda c: int(c.replace('image_', '')))
 new_case_set = set(new_cases)
 
 all_cases = sorted(
     (f.replace('.png', '') for f in os.listdir(os.path.join(dataset_dir, 'labelsTr'))),
-    key=lambda c: int(c.replace('Case', ''))
+    key=lambda c: int(c.replace('image_', ''))
 )
 base_cases = [c for c in all_cases if c not in new_case_set]
 
@@ -165,17 +171,15 @@ random.seed(42)
 shuffled = base_cases[:]
 random.shuffle(shuffled)
 
-n_splits = 5
-folds = [[] for _ in range(n_splits)]
-for i, case in enumerate(shuffled):
-    folds[i % n_splits].append(case)
+val_fraction = 0.2
+n_val = int(len(shuffled) * val_fraction)
+val = sorted(shuffled[:n_val], key=lambda c: int(c.replace('image_', '')))
+train = sorted(shuffled[n_val:] + new_cases, key=lambda c: int(c.replace('image_', '')))
 
-splits = []
-for i in range(n_splits):
-    val = sorted(folds[i], key=lambda c: int(c.replace('Case', '')))
-    train_base = [c for j, f in enumerate(folds) if j != i for c in f]
-    train = sorted(train_base + new_cases, key=lambda c: int(c.replace('Case', '')))
-    splits.append({'train': train, 'val': val})
+# nnUNet indexes splits_final.json by fold number at the command line
+# (fold 0 -> splits[0]). Only fold 0 is ever trained/loaded in this
+# workflow, so a single-entry list is sufficient.
+splits = [{'train': train, 'val': val}]
 
 json.dump(splits, open(out_path, 'w'), indent=2)
 "
@@ -198,13 +202,12 @@ after training, rather than relying on the validation loss curve alone.
 the rest into training. This does let fold 0's validation Dice reflect whether the
 correction generalizes, at the cost of that held-out video's corrections not
 directly influencing the trained weights. Use `case_mapping.json` (case ID → source
-filename) to pick which cases belong to the video you want held out.
+filename) to pick which cases belong to the video you want held out — in the script
+above, move that video's cases out of `new_cases` and into `val` instead of `train`.
 
-**Only building fold 0?** Since `nnUNet_wrapper.py` only ever loads fold 0, if
-you're not training the other 4 folds there's no need to run the script above across
-all 5 — just edit fold 0 of the existing `splits_final.json` (add the forced-train
-cases to `folds[0]['train']` and any held-out cases to `folds[0]['val']`) and leave
-folds 1–4 untouched.
+**Want the full 5-fold ensemble instead?** That's a different workflow — see
+"Full Retrain from Scratch" below, which trains all 5 folds from scratch rather
+than warm-starting a single fold from the existing checkpoint.
 
 ## Step 7 — Transfer Files to the VM
 

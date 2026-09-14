@@ -29,10 +29,10 @@ layout: none
 <section class="hero">
   <div class="wrap">
     <div>
-      <h1>Root phenotyping,<br>tracked plant by plant.</h1>
+      <h1>Plant phenotyping,<br>tracked plant by plant.</h1>
       <p class="lede">
         A GUI pipeline for segmenting and measuring root and hypocotyl growth
-        from Arabidopsis and tomato timelapse plates — image alignment,
+        from Arabidopsis timelapse plates — image alignment,
         nnU-Net segmentation, and per-plant growth curves, end to end.
       </p>
       <p class="hero-meta">
@@ -42,6 +42,7 @@ layout: none
       <div class="cta-row">
         <a class="btn primary" href="{{ '/docs/install.html' | relative_url }}">Install guide</a>
         <a class="btn ghost" href="https://github.com/{{ site.repository }}">View on GitHub</a>
+        <a class="btn primary" href="https://huggingface.co/datasets/calvinyong1/ArabidopsisDataset">View Dataset</a>
       </div>
     </div>
 
@@ -130,11 +131,11 @@ layout: none
     <p class="section-head">Documentation</p>
     <div class="docs-grid">
       <a class="doc-card" href="{{ '/docs/install.html' | relative_url }}">
-        <h3>WSL / install guide</h3>
+        <h3>Installation Guide</h3>
         <p>Step-by-step setup for Windows via WSL, including the WSL1-vs-WSL2 GUI gotcha.</p>
       </a>
       <a class="doc-card" href="{{ '/docs/training.html' | relative_url }}">
-        <h3>Fine-tuning nnU-Net</h3>
+        <h3>Training The Model</h3>
         <p>Dataset prep, splits, VM training, and checkpoint handling for the segmentation model.</p>
       </a>
       <a class="doc-card" href="{{ '/docs/architecture.html' | relative_url }}">

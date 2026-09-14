@@ -1,24 +1,27 @@
 ---
 layout: default
-title: WSL / Install guide
+title: Install guide
 ---
 
-# WSL / install guide
+# Install Guide
 
-This walks through getting this system running on a Windows machine, from a
-clean Windows install through to launching the apps from your Desktop. It
-uses `installer_conda_wsl.sh`, which sets up a Linux (Ubuntu) environment
-inside Windows via WSL2, installs the conda environment and dependencies, and
-creates native Windows shortcuts that launch the GUI apps.
-
+This walks through getting this system running from a clean machine through
+to launching the apps. Pick the section for your OS below.
 
 ## Before you start
 
 ArabidopsisAnalysisV2 ships three GUI apps — `imageAligner`, `segmentationApp`,
 and `singlePlantAnalysis` — each with its own `run.py`. The installer scripts
-(`installer_conda_{wsl,linux,mac}.sh`) set up a conda environment and clone
-the repo into a dedicated install directory.
+(`installer_conda_{wsl,linux,mac}.sh`) set up a conda environment; how they
+handle the repo itself differs by platform (see each section below).
 
+---
+
+# Windows Installation
+
+Uses `installer_conda_wsl.sh`, which sets up a Linux (Ubuntu) environment
+inside Windows via WSL2, installs the conda environment and dependencies, and
+creates native Windows shortcuts that launch the GUI apps.
 
 ## Prerequisites
 
@@ -47,7 +50,6 @@ create your Linux username/password.
 sufficiently updated Windows 10 (via Windows Update / `wsl --update`). If
 GUI windows fail to appear later, run `wsl --update` from PowerShell first.
 
-
 ### 2. NVIDIA GPU users — driver setup (Windows side, not inside WSL)
 
 If you have an NVIDIA GPU and want segmentation to run on it (the "Full
@@ -74,7 +76,6 @@ update the Windows driver and re-check before continuing — don't try to
 If you don't have a GPU, skip this — you can still install a CPU-only
 ("Lite Node") setup for analysis-only workflows.
 
-
 ### 3. Install Miniconda inside WSL
 
 Open your **Ubuntu (WSL)** terminal and run:
@@ -93,7 +94,6 @@ present — it will not install it for you.
 `git` normally ships with Ubuntu's WSL image already; if `git --version`
 fails, install it with `sudo apt-get install -y git`.
 
-
 ## Installation
 
 ### 4. Clone the repository
@@ -102,7 +102,6 @@ fails, install it with `sudo apt-get install -y git`.
 git clone https://github.com/calvinyong1/ArabidopsisAnalysisV2.git
 cd ArabidopsisAnalysisV2
 ```
-
 
 ### 5. Run the WSL installer
 
@@ -145,13 +144,12 @@ The script will:
     interop, which is enabled by default and normally needs no action from
     you.
 
-
 ### 6. Launch the app
 
 Use the new shortcuts on your Desktop or Start Menu. The first launch may
 take a few seconds longer while the conda environment activates.
 
-## Troubleshooting
+## Windows Troubleshooting
 
 - **"This script must be run inside WSL."** — you're running it from a
   native Windows shell (PowerShell/cmd), not a WSL terminal. Open "Ubuntu"
@@ -193,11 +191,12 @@ wsl --shutdown
 
 Then reopen your WSL terminal.
 
-## System dependencies
+## System dependencies (Windows/WSL and Linux only)
 
-The installers set up Qt/X11 libraries (`libxcb-cursor0` and friends). If
-you're on a fresh or minimal WSL/Linux image and see
-`"no Qt platform plugin could be initialized"`, the above step will fix this issue.
+The WSL and Linux installers set up Qt/X11 libraries (`libxcb-cursor0` and
+friends). If you're on a fresh or minimal WSL/Linux image and see
+`"no Qt platform plugin could be initialized"`, this step is what fixes it.
+macOS uses Qt's native Cocoa backend and doesn't need this.
 
 ## GPU verification
 
@@ -205,9 +204,268 @@ After install, the script checks `torch.cuda.is_available()` to confirm the
 right `torch` build was actually installed — not just that `nvidia-smi`
 reports a driver.
 
+---
+
+# Linux Installation
+
+Uses `installer_conda_linux.sh`. Like the Windows/WSL installer (and unlike
+the macOS one), this script clones the repo into its own **separate install
+directory** rather than deploying from wherever you run it — so the clone
+you make to obtain the script is not the copy that ends up running long
+term.
+
+## Prerequisites
+
+### 1. Confirm `git` is installed
+
+Most distros ship this already:
+
+```bash
+git --version
+```
+
+If it's missing, install it with your distro's package manager, e.g.
+`sudo apt-get install -y git` (Debian/Ubuntu), `sudo dnf install -y git`
+(Fedora), or `sudo pacman -S git` (Arch).
+
+### 2. NVIDIA GPU users — driver setup
+
+If you have an NVIDIA GPU and want segmentation to run on it (the "Full
+Node" option below), install the proprietary NVIDIA driver through your
+distro's package manager or driver installer (e.g. Ubuntu's
+"Additional Drivers" tool, or `sudo apt-get install nvidia-driver-<version>`)
+rather than compiling from NVIDIA's site unless you have a reason to.
+
+Verify it's working before continuing:
+
+```bash
+nvidia-smi
+```
+
+If this doesn't print your GPU info, resolve the driver install first —
+segmentation will otherwise silently fall back to CPU.
+
+If you don't have a GPU, skip this — a CPU-only ("Lite Node") setup works
+fine for analysis-only workflows.
+
+### 3. Install Miniconda
+
+```bash
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+bash ~/miniconda.sh -b -p $HOME/miniconda3
+source $HOME/miniconda3/etc/profile.d/conda.sh
+conda init bash    # or: conda init zsh, depending on your shell
+```
+
+Close and reopen your terminal (or `source ~/.bashrc`) so `conda` is on your
+`PATH` — the installer script requires `conda` to already be present.
+
+## Installation
+
+### 4. Clone the repository
+
+```bash
+git clone https://github.com/calvinyong1/ArabidopsisAnalysisV2.git
+cd ArabidopsisAnalysisV2
+```
+
+This clone is only needed to obtain and run the installer script — it's
+safe to delete afterward, same as on Windows/WSL.
+
+### 5. Run the Linux installer
+
+```bash
+bash installer_conda_linux.sh
+```
+
+The script will:
+
+1. **Verify `conda` is available.**
+2. **Detect your GPU** via `nvidia-smi` (informational at this stage).
+3. **Install system dependencies** — `libzbar0` (QR code support) and the
+   Qt/X11 libraries (`libxcb-cursor0` and friends) needed for the PyQt5
+   GUIs — via `apt-get`. This assumes a Debian/Ubuntu-based distro; see
+   Troubleshooting below if you're on something else.
+4. **Ask for an install directory** (default: `~/.local/chronoroot`) —
+   separate from the Step 4 clone, which this step re-clones from.
+5. **Clone/update the repo** into that install directory. This is the copy
+   that gets launched going forward and that `git pull` updates on re-runs.
+6. **Ask you to choose an installation type:**
+   - **Full Node** — segmentation + analysis. Requires a GPU (you can
+     proceed without one, but segmentation will be very slow on CPU).
+   - **Lite Node** — analysis only, no segmentation model, with the option
+     to also install the Segmentation GUI in monitoring-only mode.
+7. **Create the `ChronoRoot` conda environment** from the appropriate
+   `environment.yml` / `environment_no_nnunet.yml`.
+8. **Verify the GPU is actually usable by PyTorch** (Full Node only) via
+   `torch.cuda.is_available()` — a real check, not just the earlier
+   `nvidia-smi` detection.
+9. **Download the segmentation model weights** (Full Node only).
+10. **Create application launcher entries** (a `.desktop` file per installed
+    app, if your desktop environment supports the XDG Desktop Entry spec)
+    so the apps show up in your application menu.
+
+### 6. Launch the app
+
+Use the new entries in your application menu. If your desktop environment
+doesn't pick up `.desktop` files automatically (or you're on a minimal
+window manager), launch manually instead:
+
+```bash
+conda activate ChronoRoot
+cd ~/.local/chronoroot/ChronoRoot2/<appFolder>   # singlePlantAnalysis / segmentationApp / imageAligner
+python run.py
+```
+
+## Linux Troubleshooting
+
+- **`apt-get: command not found` / package install step fails** — the
+  installer assumes a Debian/Ubuntu-based distro. On Fedora/RHEL, install
+  the equivalent packages manually first: `sudo dnf install zbar
+  xcb-util-cursor` (package names may vary by release); on Arch:
+  `sudo pacman -S zbar xcb-util-cursor`. Then re-run the installer — it
+  should skip past the dependency step if it detects they're already
+  present, or you can comment out that step if it doesn't.
+- **`torch.cuda.is_available()` fails despite `nvidia-smi` working** —
+  usually a CUDA/driver version mismatch between the installed driver and
+  the PyTorch build. Confirm your driver is current and re-run the
+  installer; it's safe to re-run (it updates the existing conda environment
+  and repo rather than starting over).
+- **No application menu entry appears** — some minimal or tiling window
+  managers don't read `.desktop` files automatically. Use the manual launch
+  command above, or add the generated `.desktop` file's directory to
+  whatever launcher/menu tool your WM uses.
+- **GUI windows fail to open at all** — confirm you're running this in a
+  graphical session (not over a bare SSH connection without `-X`/`-Y`
+  forwarding, and not from a TTY). For SSH usage, connect with
+  `ssh -X user@host` or set up a proper remote desktop session instead.
+
+---
+
+# macOS Installation
+
+Uses `installer_conda_mac.sh`. This behaves differently from the
+Windows/Linux installers in one important way: it deploys **in place**, from
+whatever local checkout you run it from (`$SCRIPT_DIR`) — it does not clone
+a separate copy into its own install directory the way `installer_conda_wsl.sh`
+and `installer_conda_linux.sh` do. That means **where you clone the repo is
+where the app will live**, so pick that location deliberately before you
+start (e.g. `~/Applications/ArabidopsisAnalysisV2` or wherever you keep long-
+lived local projects) — you won't get a second, separate "install directory"
+step later to move it.
+
+## Prerequisites
+
+### 1. Install Xcode Command Line Tools
+
+```bash
+xcode-select --install
+```
+
+This provides `git` and the compiler toolchain some conda packages need to
+build. If `git --version` already works, you can skip this.
+
+### 2. Install Miniconda
+
+```bash
+curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-$(uname -m).sh
+bash Miniconda3-latest-MacOSX-$(uname -m).sh -b -p $HOME/miniconda3
+source $HOME/miniconda3/etc/profile.d/conda.sh
+conda init zsh   # or: conda init bash, depending on your shell
+```
+
+`$(uname -m)` picks the right installer automatically — `arm64` on Apple
+Silicon, `x86_64` on Intel Macs. Close and reopen your terminal (or `source
+~/.zshrc`) so `conda` is on your `PATH` — the installer script requires
+`conda` to already be present.
+
+### 3. GPU acceleration — what to expect
+
+There's no CUDA on macOS. Segmentation uses Apple's **MPS** backend
+(`torch.backends.mps.is_available()`) automatically on **Apple Silicon**
+(M1/M2/M3/M4) — no separate driver install needed, it's built into the OS
+and PyTorch. On an **Intel Mac**, there is no MPS path either, so
+segmentation falls back to CPU and will be considerably slower. If you're on
+an Intel Mac and plan to do heavy segmentation work, the "Lite Node" +
+monitoring-only option below (or running segmentation on a separate machine
+with an NVIDIA GPU) is worth considering.
+
+## Installation
+
+### 4. Clone the repository — to where you want it to live
+
+```bash
+git clone https://github.com/calvinyong1/ArabidopsisAnalysisV2.git
+cd ArabidopsisAnalysisV2
+```
+
+Unlike the Windows/Linux flow, **do not delete this clone afterward** — this
+is the copy the app will run from going forward, not a temporary staging
+copy.
+
+### 5. Run the macOS installer
+
+```bash
+bash installer_conda_mac.sh
+```
+
+The script will:
+
+1. **Detect Apple Silicon vs. Intel** and confirm MPS availability where
+   applicable.
+2. **Ask you to choose an installation type**, same as Windows/Linux:
+   - **Full Node** — segmentation + analysis (uses MPS on Apple Silicon, CPU
+     on Intel).
+   - **Lite Node** — analysis only, with the option to also install the
+     Segmentation GUI in monitoring-only mode.
+3. **Create the `ChronoRoot` conda environment** from the appropriate
+   `environment.yml` / `environment_no_nnunet.yml`.
+4. **Download the segmentation model weights** (Full Node only).
+
+### 6. Launch the app
+
+Since this installer deploys in place rather than creating a separate
+install directory with desktop shortcuts, launch each app directly from your
+cloned repo with the `ChronoRoot` conda environment active:
+
+```bash
+conda activate ChronoRoot
+cd singlePlantAnalysis   # or segmentationApp / imageAligner
+python run.py
+```
+
+If you'd like a Dock/Applications shortcut, you can create your own
+`.command` file or Automator app that runs the above two lines — the
+installer script itself does not generate one.
+
+## macOS Troubleshooting
+
+- **`conda: command not found`** — your terminal hasn't picked up the
+  Miniconda install. Run `source $HOME/miniconda3/etc/profile.d/conda.sh`,
+  or reopen your terminal after Step 2.
+- **Segmentation runs on CPU despite having Apple Silicon** — confirm with
+  `python -c "import torch; print(torch.backends.mps.is_available())"`
+  inside the `ChronoRoot` environment. If this prints `False`, your PyTorch
+  build may predate MPS support or is a CPU-only build; reinstalling the
+  environment via the installer (safe to re-run) should pull a compatible
+  version.
+- **App won't launch / import errors** — make sure you're running `python
+  run.py` with `ChronoRoot` activated (`conda activate ChronoRoot`), from
+  inside the correct app folder (`singlePlantAnalysis`, `segmentationApp`,
+  or `imageAligner`), not from the repo root.
+- **You cloned to the "wrong" place** — since the installer deploys in
+  place, moving the app means moving the whole cloned folder and re-running
+  `installer_conda_mac.sh` from its new location (paths baked into the conda
+  environment activation scripts can otherwise point at the old location).
+
+---
 
 ## Updating the Application
 
-The script is safe to run again later to pick up application updates and latest model weights: it detects
-the existing clone and runs `git pull` instead of cloning fresh, and updates
-(rather than recreates) the existing `ChronoRoot` conda environment.
+- **Windows/Linux:** re-run `installer_conda_wsl.sh` / `installer_conda_linux.sh`
+  any time. It detects the existing clone in your install directory and runs
+  `git pull` instead of cloning fresh, and updates (rather than recreates)
+  the existing `ChronoRoot` conda environment.
+- **macOS:** since the app runs from the same clone you installed from, just
+  `git pull` inside that folder, then re-run `bash installer_conda_mac.sh` to
+  pick up any conda environment or model-weight changes.
