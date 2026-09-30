@@ -1,9 +1,9 @@
 ---
 layout: default
-title: Architecture notes
+title: Architecture Notes
 ---
 
-# Architecture notes
+# Architecture Notes
 
 Things worth knowing before changing the analysis pipeline.
 
@@ -20,16 +20,16 @@ legitimate drift). Hypocotyl selection anchors on `fixed_seed_position`, so
 it stays independent of any root-tracking mistakes and consistent
 frame-to-frame.
 
-## Main / lateral classification is topology-based, not per-pixel
+## Main / Lateral Classification Is Topology-Based, Not Per-Pixel
 
 `graphInit()` marks the longest weighted path from the seed as `root_type=10`
 (main); everything else defaults to lateral. The skeleton is built from a
 merged binary mask (classes 1+2 combined) before any per-pixel class
-matters — so per-pixel main/lateral mislabeling in the segmentation mask
+matters, so per-pixel main/lateral mislabeling in the segmentation mask
 does **not** corrupt `MainRootLength` / `LateralRootsLength`. It only affects
 the `SegMulti` visualization coloring used for human QC.
 
-## `SegMulti` images are visualizations, not raw masks
+## `SegMulti` Images Are Visualizations, Not Raw Masks
 
 BGR color key:
 
@@ -44,27 +44,27 @@ The real multi-class mask (pixel values 0&ndash;7) lives at the path in each
 plant's `metadata.json` under the `SegPath` key, e.g.
 `<video>/Segmentation/Ensemble/`.
 
-## Class labels (`dataset.json`)
+## Class Labels (`dataset.json`)
 
 ```
 0 = background
 1 = main root
 2 = lateral root
 3 = seed
-4 = hypocotyl   (spelled "hypocotil" — typo, preserved for compatibility)
+4 = hypocotyl   (spelled "hypocotil": typo, preserved for compatibility)
 5 = leaf
 6 = petiole
 7 = ignore
 ```
 
-## Case naming
+## Case Naming
 
 The live dataset and `corrected_to_nnunet_cases.py` /
 `CreateArabidopsisDataset.ipynb` use `image_N`, not `CaseN`. If you see
-`CaseN` anywhere, it's stale — reconcile it.
+`CaseN` anywhere, it's stale; reconcile it.
 
-## What's different from upstream ChronoRoot2
+## What's Different from Upstream ChronoRoot2
 
 - `chronoRootApp` (upstream name) was renamed to `singlePlantAnalysis` here.
 - `imageAligner` exists only in this fork, not upstream.
-- Upstream has a `chronoRootScreeningApp` — this fork does not.
+- Upstream has a `chronoRootScreeningApp`; this fork does not.

@@ -27,15 +27,75 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 APP_DIR="$HOME/Applications"
 ENV_NAME="ChronoRoot"
 ENV_FILE="$SCRIPT_DIR/environment.yml"
+SELF="$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")"
+
+# Pull the latest code into this checkout before touching the conda env, so
+# environment.yml / download_weights.sh / the app code are all current.
+# Skippable with --no-pull or by answering "n" at the prompt.
+update_repo() {
+    section_title "1. Update Repository"
+
+    if [ "$SKIP_PULL" = true ]; then
+        print_status "Skipping git pull (--no-pull)."
+        return
+    fi
+    if ! command_exists git || ! git -C "$SCRIPT_DIR" rev-parse --is-inside-work-tree &>/dev/null; then
+        print_warning "Not a git checkout (or git not installed). Skipping update."
+        return
+    fi
+    if ! git -C "$SCRIPT_DIR" rev-parse --abbrev-ref --symbolic-full-name '@{u}' &>/dev/null; then
+        print_warning "Current branch has no upstream to pull from. Skipping update."
+        return
+    fi
+
+    read -p "Pull the latest changes from GitHub first? [Y/n]: " do_pull
+    if [[ $do_pull =~ ^[Nn]$ ]]; then
+        print_status "Skipping update. Installing from the current checkout."
+        return
+    fi
+
+    local before_head before_self
+    before_head=$(git -C "$SCRIPT_DIR" rev-parse HEAD)
+    before_self=$(shasum "$SELF" | cut -d' ' -f1)
+
+    print_status "Pulling latest changes..."
+    if ! git -C "$SCRIPT_DIR" pull --ff-only; then
+        print_error "git pull failed (local changes or a diverged branch?)."
+        print_warning "Resolve it in $SCRIPT_DIR, or continue with the current checkout."
+        read -p "Continue without updating? [y/N]: " proceed
+        [[ $proceed =~ ^[Yy]$ ]] || exit 1
+        return
+    fi
+
+    if [ "$(git -C "$SCRIPT_DIR" rev-parse HEAD)" = "$before_head" ]; then
+        print_success "Already up to date."
+        return
+    fi
+    print_success "Updated to $(git -C "$SCRIPT_DIR" log -1 --format='%h %s')."
+
+    # Bash has already parsed this file, so a pulled change to the installer
+    # itself would not take effect until the next run. Restart into it now.
+    if [ "$(shasum "$SELF" | cut -d' ' -f1)" != "$before_self" ]; then
+        print_status "The installer itself was updated. Restarting with the new version..."
+        exec bash "$SELF" --no-pull
+    fi
+}
 
 main() {
+    SKIP_PULL=false
+    for arg in "$@"; do
+        [ "$arg" = "--no-pull" ] && SKIP_PULL=true
+    done
+
     clear
     echo -e "${BOLD}ChronoRoot macOS Installer${NC}"
     echo "============================================"
     echo ""
 
-    # 1. System Info
-    section_title "1. System Check"
+    update_repo
+
+    # 2. System Info
+    section_title "2. System Check"
 
     ARCH=$(uname -m)
     if [ "$ARCH" = "arm64" ]; then
@@ -46,8 +106,8 @@ main() {
     print_warning "NVIDIA GPU acceleration is not available on macOS."
     print_status  "Segmentation will run on CPU. All analysis tools work normally."
 
-    # 2. Conda Check / Auto-Install
-    section_title "2. Conda Setup"
+    # 3. Conda Check / Auto-Install
+    section_title "3. Conda Setup"
 
     if command_exists conda; then
         print_success "Conda already installed."
@@ -80,8 +140,8 @@ main() {
     # Make conda available for the rest of this script
     source "$CONDA_BASE/etc/profile.d/conda.sh"
 
-    # 3. Homebrew / libzbar
-    section_title "3. System Dependencies"
+    # 4. Homebrew / libzbar
+    section_title "4. System Dependencies"
 
     if command_exists brew; then
         print_success "Homebrew detected."
@@ -98,8 +158,8 @@ main() {
         [[ $proceed =~ ^[Nn]$ ]] && exit 1
     fi
 
-    # 4. Conda Environment
-    section_title "4. Conda Environment Setup"
+    # 5. Conda Environment
+    section_title "5. Conda Environment Setup"
 
     if [ ! -f "$ENV_FILE" ]; then
         print_error "environment.yml not found at: $ENV_FILE"
@@ -116,8 +176,8 @@ main() {
 
     print_success "Environment '$ENV_NAME' is ready."
 
-    # 5. Download Model Weights
-    section_title "5. Downloading Segmentation Weights"
+    # 6. Download Model Weights
+    section_title "6. Downloading Segmentation Weights"
 
     WEIGHTS_SCRIPT="$SCRIPT_DIR/segmentationApp/download_weights.sh"
 
@@ -130,8 +190,8 @@ main() {
         print_warning "download_weights.sh not found at expected path. Skipping."
     fi
 
-    # 6. Create macOS .app Launchers
-    section_title "6. Creating App Launchers"
+    # 7. Create macOS .app Launchers
+    section_title "7. Creating App Launchers"
 
     mkdir -p "$APP_DIR"
 
@@ -197,7 +257,7 @@ PLISTEOF
     create_mac_app "ChronoRoot Segmentation"  "$SCRIPT_DIR/segmentationApp"
     create_mac_app "ChronoRoot Image Aligner" "$SCRIPT_DIR/imageAligner"
 
-    # 7. Done
+    # 8. Done
     section_title "Installation Complete"
     print_success "ChronoRoot is ready!"
     echo ""

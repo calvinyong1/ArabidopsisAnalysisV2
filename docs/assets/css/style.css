@@ -1,17 +1,17 @@
-/* ArabidopsisAnalysisV2 — design tokens
-   Palette grounded in the subject: agar plates, root/hypocotyl tissue,
-   and the instrument-panel feel of a segmentation/analysis tool.       */
+/* ArabidopsisAnalysisV2 design tokens
+   Palette: clean white page, muted sage-green primary, pale sage panels.
+   (Token names kept from the earlier palette so rules below are unchanged.) */
 
 :root {
-  --ink: #15170f;
-  --ink-soft: #454737;
-  --paper: #e7e4d8;
-  --paper-raised: #f1efe4;
-  --paper-line: #c9c4b0;
-  --moss: #3c5a3b;
-  --moss-dark: #263c26;
-  --root: #a05e26;
-  --root-soft: #c98a4b;
+  --ink: #1f2320;
+  --ink-soft: #5d6660;
+  --paper: #ffffff;
+  --paper-raised: #eef3ef;
+  --paper-line: #dbe4dd;
+  --moss: #4a6b57;
+  --moss-dark: #36513f;
+  --root: #2f4a3a;
+  --root-soft: #9dbfa8;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --sans: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
   --max: 920px;
@@ -19,7 +19,11 @@
 
 * { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%;
+  /* keep anchor targets (#apps, TOC links) clear of the sticky navbar */
+  scroll-padding-top: 84px;
+}
 
 body {
   margin: 0;
@@ -45,8 +49,12 @@ a:hover { color: var(--root); }
 }
 
 header.site {
-  border-bottom: 1px solid var(--paper-line);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--moss-dark);
   padding: 22px 0;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08), 0 4px 14px rgba(31, 35, 32, 0.12);
 }
 
 header.site .wrap {
@@ -62,15 +70,19 @@ header.site .wrap {
   font-weight: 600;
   font-size: 15px;
   letter-spacing: -0.01em;
-  color: var(--ink);
+  color: #ffffff;
   text-decoration: none;
 }
 
-.brand span { color: var(--root); }
+.brand:hover { color: #ffffff; }
+
+.brand span { color: #b9d6c2; }
 
 nav.top { display: flex; gap: 22px; font-family: var(--mono); font-size: 14px; }
-nav.top a { text-decoration: none; color: var(--ink-soft); }
-nav.top a:hover { color: var(--moss-dark); }
+nav.top a { text-decoration: none; color: #dfeae2; }
+nav.top a:hover { color: #ffffff; text-decoration: underline; text-underline-offset: 4px; }
+
+header.site a:focus-visible { outline-color: #ffffff; }
 
 /* ---------- hero ---------- */
 
@@ -115,13 +127,19 @@ nav.top a:hover { color: var(--moss-dark); }
   border-radius: 3px;
 }
 
-.cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.cta-row { display: flex; gap: 8px; }
 
 .btn {
   display: inline-block;
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--mono);
-  font-size: 14px;
-  padding: 11px 18px;
+  font-size: 12px;
+  padding: 11px 6px;
   border-radius: 3px;
   text-decoration: none;
   border: 1px solid var(--ink);
@@ -215,7 +233,7 @@ nav.top a:hover { color: var(--moss-dark); }
 
 .app-card p { margin: 0; color: var(--ink-soft); font-size: 15px; }
 
-/* ---------- changelog feed (a real sequence — dates are meaningful) ---------- */
+/* ---------- changelog feed (a real sequence; dates are meaningful) ---------- */
 
 .changelog { padding: 56px 0; border-bottom: 1px solid var(--paper-line); }
 
@@ -275,44 +293,359 @@ footer.site {
 
 footer.site a { color: var(--ink-soft); }
 
-/* ---------- docs page (markdown content) ---------- */
+/* ---------- docs page (markdown content) ----------
+   Everything here is scoped to .doc-body so the landing page is untouched.
+   Wide screens get a section rail drawn as a growing root; narrow screens
+   fall back to a single column.                                           */
 
-.doc-body { padding: 48px 0 72px; }
+.doc-body { padding: 44px 0 88px; }
+
 .doc-body .wrap { max-width: 760px; }
 
-.doc-body h1 { font-family: var(--mono); font-size: 30px; margin-top: 0; }
-.doc-body h2 { font-family: var(--mono); font-size: 20px; margin-top: 2.2em; }
-.doc-body h3 { font-family: var(--mono); font-size: 16px; margin-top: 1.8em; }
+.doc-body .doc-main { min-width: 0; }
 
-.doc-body p, .doc-body li { max-width: 74ch; }
+.doc-body .doc-rail { display: none; }
 
-.doc-body pre {
-  background: var(--ink);
-  color: #e7e4d8;
-  padding: 16px 18px;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-size: 13.5px;
+@media (min-width: 1080px) {
+  .doc-body .wrap.has-rail {
+    max-width: 1100px;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 720px);
+    column-gap: 64px;
+    justify-content: center;
+  }
+  .doc-body .has-rail .doc-rail { display: block; grid-column: 1; grid-row: 1; }
+  .doc-body .has-rail .doc-main { grid-column: 2; grid-row: 1; }
+  /* the hand-written contents box is replaced by the rail at this width */
+  .doc-body .has-rail .toc { display: none; }
+  /* line the navbar up with the wider doc grid */
+  body.has-rail header.site .wrap { max-width: 1100px; }
 }
+
+/* body copy */
+
+.doc-body .doc-main {
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.doc-body p, .doc-body li { max-width: 70ch; }
+
+.doc-body a {
+  color: var(--moss-dark);
+  text-decoration-color: var(--root-soft);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.doc-body a:hover { color: var(--root); text-decoration-color: var(--moss); }
+
+.doc-body strong { font-weight: 600; }
+
+.back-link { font-family: var(--mono); font-size: 13px; margin: 0 0 28px; }
+.back-link a { text-decoration: none; }
+.back-link a:hover { text-decoration: underline; }
+
+/* headings: the page title keeps the landing page's mono voice,
+   section headings switch to Plex Sans for easier scanning */
+
+.doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4 {
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+
+.doc-body .doc-main > h1:first-of-type {
+  font-family: var(--mono);
+  font-size: 38px;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin: 0 0 18px;
+}
+
+.doc-body .doc-main > h1:first-of-type + p {
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin: 0 0 2.2em;
+}
+
+/* later h1s (install: Windows / Linux / macOS) are major section breaks */
+.doc-body .doc-main > h1:not(:first-of-type) {
+  font-size: 30px;
+  line-height: 1.2;
+  margin: 2.6em 0 0.6em;
+  padding-top: 0.9em;
+  border-top: 3px solid var(--moss);
+}
+
+.doc-body hr:has(+ h1) { display: none; }
+
+.doc-body h2 {
+  font-size: 24px;
+  line-height: 1.25;
+  margin: 2.6em 0 0.7em;
+}
+
+.doc-body h3 {
+  font-size: 18.5px;
+  line-height: 1.35;
+  margin: 2em 0 0.5em;
+}
+
+.doc-body h4 { font-size: 16px; margin: 1.6em 0 0.4em; }
+
+.doc-body h1 + h2, .doc-body h2 + h3 { margin-top: 1em; }
+
+/* file names in headings keep the mono face but lose the chip */
+.doc-body h1 code, .doc-body h2 code, .doc-body h3 code {
+  font-size: 0.9em;
+  background: none;
+  padding: 0;
+  font-weight: 600;
+}
+
+/* step numbers ("Step 3:", "1.") are a real sequence, so they get a badge */
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.7em;
+  height: 1.7em;
+  padding: 0 0.4em;
+  margin-right: 0.55em;
+  border-radius: 5px;
+  background: var(--moss);
+  color: #ffffff;
+  font-family: var(--mono);
+  font-size: 0.72em;
+  font-weight: 500;
+  letter-spacing: 0;
+  vertical-align: 0.14em;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* changelog dates sit on their own line above what changed */
+.date-tag {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--moss);
+  letter-spacing: 0;
+}
+
+/* code */
 
 .doc-body code {
   font-family: var(--mono);
   background: var(--paper-raised);
   padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 0.88em;
+  border-radius: 4px;
+  font-size: 0.86em;
 }
 
-.doc-body pre code { background: none; padding: 0; }
+.doc-body pre {
+  background: var(--moss-dark);
+  color: #eef3ef;
+  padding: 16px 20px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 1em 0 1.4em;
+}
+
+.doc-body pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+.doc-body pre ::selection { background: var(--root-soft); color: var(--ink); }
+
+/* blockquotes carry notes and warnings, so they read at full strength */
 
 .doc-body blockquote {
-  margin: 1.4em 0;
-  padding: 2px 0 2px 18px;
-  border-left: 3px solid var(--root-soft);
-  color: var(--ink-soft);
+  margin: 1.5em 0;
+  padding: 14px 20px;
+  background: var(--paper-raised);
+  border-left: 3px solid var(--moss);
+  border-radius: 0 6px 6px 0;
+  color: var(--ink);
 }
 
-.back-link { font-family: var(--mono); font-size: 13px; }
+.doc-body blockquote p { margin: 0.5em 0; }
+.doc-body blockquote > :first-child { margin-top: 0; }
+.doc-body blockquote > :last-child { margin-bottom: 0; }
+.doc-body blockquote code { background: #ffffff; }
+
+/* tables */
+
+.doc-body table {
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1.2em 0 1.8em;
+  font-size: 15px;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  width: max-content;
+  border: 1px solid var(--paper-line);
+  border-radius: 6px;
+}
+
+.doc-body th, .doc-body td {
+  text-align: left;
+  vertical-align: top;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--paper-line);
+}
+
+.doc-body tbody tr:last-child td { border-bottom: none; }
+
+.doc-body th {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--paper-raised);
+}
+
+.doc-body tbody tr:hover { background: #f7faf8; }
+
+.doc-body hr {
+  border: none;
+  border-top: 1px solid var(--paper-line);
+  margin: 3em 0 0;
+}
+
+.doc-body li + li { margin-top: 0.35em; }
+.doc-body ol > li + li { margin-top: 0.8em; }
+.doc-body li > pre { margin: 0.6em 0 0.9em; }
+
+/* hand-written contents box (shown when there's no rail) */
+
+.doc-body .toc {
+  background: var(--paper-raised);
+  border-radius: 6px;
+  padding: 16px 22px;
+  margin: 1.6em 0 2em;
+  font-size: 15px;
+}
+
+.doc-body .toc p { margin: 0 0 8px; font-weight: 600; }
+.doc-body .toc ul { margin: 0; padding-left: 18px; }
+.doc-body .toc li + li { margin-top: 3px; }
+.doc-body .toc a { text-decoration: none; }
+.doc-body .toc a:hover { text-decoration: underline; }
+
+/* section rail: a root that grows down to the section being read */
+
+.doc-rail {
+  position: sticky;
+  top: 100px;
+  align-self: start;
+  max-height: calc(100vh - 124px);
+  overflow-y: auto;
+  padding: 6px 0 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.doc-rail .rail-title {
+  margin: 0 0 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.doc-rail ol {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 20px;
+}
+
+/* the track, and the grown part of it */
+.doc-rail ol::before,
+.doc-rail .rail-grow {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0;
+  width: 2px;
+  border-radius: 2px;
+}
+
+.doc-rail ol::before { bottom: 0; background: var(--paper-line); }
+
+.doc-rail .rail-grow {
+  height: 0;
+  background: var(--moss);
+  transition: height 220ms ease-out;
+}
+
+.doc-rail li { position: relative; margin: 0; padding: 5px 0; }
+
+.doc-rail a {
+  display: block;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.doc-rail a:hover { color: var(--moss-dark); }
+
+/* node on the track for each section */
+.doc-rail a::before {
+  content: "";
+  position: absolute;
+  left: -20px;
+  top: 0.72em;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid var(--paper-line);
+  box-sizing: border-box;
+  transition: background-color 220ms, border-color 220ms;
+}
+
+.doc-rail a.passed::before { border-color: var(--moss); }
+
+.doc-rail a.active { color: var(--ink); font-weight: 500; }
+.doc-rail a.active::before { background: var(--moss); border-color: var(--moss); }
+
+/* install's OS groups: a heading in the rail, with its sections nested */
+.doc-rail li.group > a { color: var(--ink); font-weight: 600; margin-top: 10px; }
+.doc-rail li.group:first-child > a { margin-top: 0; }
+.doc-rail li.sub a { padding-left: 12px; font-size: 13.5px; }
+.doc-rail li.sub a::before { width: 8px; height: 8px; left: -19px; top: 0.78em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-rail .rail-grow, .doc-rail a::before { transition: none; }
+}
+
+@media (max-width: 640px) {
+  /* the navbar wraps to two lines here, so anchor jumps need more clearance */
+  html { scroll-padding-top: 124px; }
+  .doc-body { padding-top: 28px; }
+  .doc-body .doc-main > h1:first-of-type { font-size: 30px; }
+  .doc-body .doc-main > h1:not(:first-of-type) { font-size: 25px; }
+  .doc-body h2 { font-size: 21px; }
+  .doc-body pre { margin-left: -4px; margin-right: -4px; font-size: 13px; }
+}
 
 /* ---------- responsive ---------- */
 
@@ -322,6 +655,11 @@ footer.site a { color: var(--ink-soft); }
   .docs-grid { grid-template-columns: 1fr; }
   .entry { grid-template-columns: 1fr; gap: 6px; }
   .hero h1 { font-size: 32px; }
+}
+
+@media (max-width: 480px) {
+  .cta-row { flex-direction: column; }
+  .btn { white-space: normal; }
 }
 
 /* ---------- focus visibility ---------- */

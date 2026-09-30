@@ -27,7 +27,7 @@ one of the real classes. It's already declared in `dataset.json`'s `labels` bloc
 - nnUNetv2 installed and environment variables set (`nnUNet_raw`, `nnUNet_preprocessed`, `nnUNet_results`)
 - ITK-SNAP installed for annotation
 - The ChronoRoot Jupyter notebooks for dataset organization
-- Original dataset downloaded from HuggingFace (see below)
+- The training dataset downloaded from HuggingFace (see below)
 
 ## Training Preparation Overview
 
@@ -68,22 +68,35 @@ nnU-Net does not do this for you, and without it silently auto-generates its own
 random split instead (see Step 6 below for why that's a problem specifically
 when adding correction cases, and how to force them into training deliberately).
 
-## Step 1 — Download the Original Training Dataset
+## Step 1 — Download the Training Dataset
 
-The full annotated dataset (911 Arabidopsis cases) is available on HuggingFace.
-Download it so your new cases can be merged with the existing ones.
+This fork's annotated Arabidopsis dataset is hosted on HuggingFace. It builds
+on the original ChronoRoot2 annotations (https://huggingface.co/datasets/ngaggion/ChronoRoot2)
+and already includes this project's correction cases, in nnU-Net's format.
+Download it so your new cases can be merged with the existing ones:
 
 ```
-https://huggingface.co/datasets/ngaggion/ChronoRoot2
+https://huggingface.co/datasets/calvinyong1/ArabidopsisDataset
 ```
 
-The dataset should be placed/merged into:
+```bash
+hf download calvinyong1/ArabidopsisDataset --repo-type dataset \
+    --local-dir nnUNet_raw/Dataset789_ChronoRoot2
+```
+
+This produces:
 ```
 nnUNet_raw/Dataset789_ChronoRoot2/
-    imagesTr/       ← grayscale input PNGs
-    labelsTr/       ← mask PNGs (pixel values = class IDs above)
+    imagesTr/                 ← grayscale input PNGs
+    labelsTr/                 ← mask PNGs (pixel values = class IDs above)
+    imagesTs/, labelsTs/      ← held-out test cases
     dataset.json
+    splits_final.json         ← train/val assignment from the last training round
+    folder_assignments.json, folder_image_map.json   ← case → source video mapping
 ```
+
+If you're fine-tuning rather than training from scratch, also grab the
+original `splits_final.json` — see Step 6.
 
 ## Step 2 — Identify Failure Frames and Locate Their Masks
 
@@ -134,47 +147,46 @@ Use the ChronoRoot Jupyter notebooks (`trainerOrganization/`) to:
 - Copy the new files into `nnUNet_raw/Dataset789_ChronoRoot2/imagesTr/` and `labelsTr/`
 - Update `numTraining` in `dataset.json` to reflect the new total
 
-## Step 6 — Generate the Custom Validation Split (splits_final.json)
+## Step 6 — Merge Correction Cases into the Original Validation Split (splits_final.json)
 
-There is no pre-existing `splits_final.json` (the file assigning cases to
-train/val for each fold) from the original training run — it lived wherever that
-run happened. Without one, nnUNet auto-generates a random 5-fold split across
-**all** cases (old + new) the first time you preprocess, which means your new
-correction cases could by chance land in fold 0's validation set instead of its
-training set — i.e. not actually influence the fine-tuned weights.
+The original `splits_final.json` from the base training run (the file assigning
+cases to train/val for each fold) is archived on HuggingFace alongside the
+dataset — download it instead of approximating one from scratch, so fold 0's
+validation set matches the actual frames the base model was validated against
+rather than a synthetic random slice:
+
+```bash
+hf download calvinyong1/ArabidopsisDataset splits_final.json --repo-type dataset \
+    --local-dir nnUNet_raw/Dataset789_ChronoRoot2
+```
+
+If this file is ever missing (e.g. a repo that predates it being archived),
+nnUNet falls back to auto-generating a random 5-fold split across **all** cases
+(old + new) the first time you preprocess, which means your new correction
+cases could by chance land in fold 0's validation set instead of its training
+set — i.e. not actually influence the fine-tuned weights.
 
 This fine-tuning workflow only ever trains fold 0 (Step 10) — `nnUNet_wrapper.py`
-only ever loads fold 0 at inference — so `splits_final.json` only needs a single
-fold-0 entry, not the full 5-fold structure nnUNet's own tooling would normally
-generate. Generate one that forces your correction cases into fold 0's training
-set, holding out a slice of the original base dataset for fold 0's validation.
-Run this **locally**, next to your `nnUNet_raw/Dataset789_ChronoRoot2` folder:
+only ever loads fold 0 at inference — so you only need fold 0's entry from the
+downloaded file, with your correction cases merged into its `train` list; the
+other 4 folds it contains can be dropped. Run this **locally**, next to your
+`nnUNet_raw/Dataset789_ChronoRoot2` folder, after downloading the file above:
 
 ```bash
 python3 -c "
-import json, random, os
+import json, os
 
-dataset_dir = 'nnUNet_raw/Dataset789_ChronoRoot2'   # has case_mapping.json + labelsTr/
+dataset_dir = 'nnUNet_raw/Dataset789_ChronoRoot2'   # has case_mapping.json + splits_final.json
 out_path = 'splits_final.json'
 
 case_mapping = json.load(open(os.path.join(dataset_dir, 'case_mapping.json')))
 new_cases = sorted(case_mapping.keys(), key=lambda c: int(c.replace('image_', '')))
-new_case_set = set(new_cases)
 
-all_cases = sorted(
-    (f.replace('.png', '') for f in os.listdir(os.path.join(dataset_dir, 'labelsTr'))),
-    key=lambda c: int(c.replace('image_', ''))
-)
-base_cases = [c for c in all_cases if c not in new_case_set]
+original_splits = json.load(open(os.path.join(dataset_dir, 'splits_final.json')))
+fold_0 = original_splits[0]
 
-random.seed(42)
-shuffled = base_cases[:]
-random.shuffle(shuffled)
-
-val_fraction = 0.2
-n_val = int(len(shuffled) * val_fraction)
-val = sorted(shuffled[:n_val], key=lambda c: int(c.replace('image_', '')))
-train = sorted(shuffled[n_val:] + new_cases, key=lambda c: int(c.replace('image_', '')))
+train = sorted(set(fold_0['train']) | set(new_cases), key=lambda c: int(c.replace('image_', '')))
+val = sorted(fold_0['val'], key=lambda c: int(c.replace('image_', '')))
 
 # nnUNet indexes splits_final.json by fold number at the command line
 # (fold 0 -> splits[0]). Only fold 0 is ever trained/loaded in this
@@ -185,16 +197,33 @@ json.dump(splits, open(out_path, 'w'), indent=2)
 "
 ```
 
-This only matters if `case_mapping.json` (produced in Step 5) exists — it's what
-identifies which case IDs are new corrections versus original base cases. If
-you're not tracking that, you can skip the custom split and accept nnUNet's
-default random one.
+This merge step only matters if `case_mapping.json` (produced in Step 5)
+exists — it's what identifies which case IDs are new corrections versus
+original base cases. If you're not tracking that, you can skip it and use
+fold 0 of the downloaded `splits_final.json` as-is — though then your
+correction cases won't be trained on at all.
 
-Note: putting *all* correction cases into training (none held out for validation)
-means fold 0's validation loss won't tell you whether the specific correction is
-generalizing — it only reflects overfitting on the broader base dataset. Verify the
-fix worked by visually inspecting predictions on held-out misclassification frames
-after training, rather than relying on the validation loss curve alone.
+Note: correction cases still go entirely into training (none held out for
+validation), so fold 0's validation loss reflects generalization on the
+original base dataset only, not on whether the correction itself is
+generalizing. Verify the fix worked by visually inspecting predictions on
+held-out misclassification frames after training, rather than relying on the
+validation loss curve alone.
+
+**Re-upload the merged file so the next round doesn't lose your corrections.**
+The archived `splits_final.json` isn't a fixed artifact from the original base
+run — it's whatever the most recent fine-tuning round uploaded, already
+containing *that* round's corrections merged into `train`. If you don't push
+your merged copy back, the next person to fine-tune downloads the version from
+*before* your corrections, merges in only their own new cases, and yours
+silently drop out of training entirely — even though they were already
+correcting a real misclassification. As soon as you've generated the merged
+file above (no need to wait for training to finish — the file itself doesn't
+change during training), upload it back:
+
+```bash
+hf upload calvinyong1/ArabidopsisDataset splits_final.json splits_final.json --repo-type dataset
+```
 
 **Alternative — hold out one correction video for validation.** Instead of forcing
 *all* new cases into training, you can hold out the new cases from one source video
