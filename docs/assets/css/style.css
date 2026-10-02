@@ -445,6 +445,40 @@ footer.site a { color: var(--ink-soft); }
   letter-spacing: 0;
 }
 
+/* side-by-side image comparison (e.g. old vs. new model output) */
+
+.doc-body .compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 1.6em 0 2em;
+}
+
+.doc-body .compare figure { margin: 0; }
+
+.doc-body .compare img {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* same shape for both, so the captions line up even if the screenshots differ slightly */
+  aspect-ratio: 1180 / 1152;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--paper-line);
+}
+
+.doc-body .compare figcaption {
+  margin-top: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .doc-body .compare { grid-template-columns: 1fr; }
+}
+
 /* code */
 
 .doc-body code {

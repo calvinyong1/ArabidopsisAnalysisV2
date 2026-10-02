@@ -176,6 +176,19 @@ main() {
 
     print_success "Environment '$ENV_NAME' is ready."
 
+    # The pip torch wheel bundles its own libomp.dylib, while conda-forge numpy
+    # (OpenBLAS) loads the env's llvm-openmp. Two OpenMP runtimes in one process
+    # segfault during model loading, so point torch at the env's copy.
+    ENV_PREFIX="$CONDA_BASE/envs/$ENV_NAME"
+    TORCH_LIB=$("$ENV_PREFIX/bin/python" -c "import importlib.util, os; s = importlib.util.find_spec('torch'); print(os.path.join(os.path.dirname(s.origin), 'lib') if s else '')")
+    if [ -n "$TORCH_LIB" ] && [ -f "$ENV_PREFIX/lib/libomp.dylib" ] \
+        && [ -f "$TORCH_LIB/libomp.dylib" ] && [ ! -L "$TORCH_LIB/libomp.dylib" ]; then
+        print_status "Linking PyTorch to the environment's OpenMP runtime..."
+        mv "$TORCH_LIB/libomp.dylib" "$TORCH_LIB/libomp.dylib.torch-bundled.bak"
+        ln -s "$ENV_PREFIX/lib/libomp.dylib" "$TORCH_LIB/libomp.dylib"
+        print_success "PyTorch now shares a single OpenMP runtime."
+    fi
+
     # 6. Download Model Weights
     section_title "6. Downloading Segmentation Weights"
 

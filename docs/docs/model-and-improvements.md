@@ -24,6 +24,17 @@ model, and it's the piece that's changed the most.
   Support for other plant species (like tomato) still comes from the
   original project, so nothing was lost by branching off.
 
+<div class="compare">
+  <figure>
+    <img src="{{ '/assets/img/segmentation-old-model.jpg' | relative_url }}" alt="Old model segmentation of an Arabidopsis plate: several hypocotyls are partly labeled as leaf or left unlabeled" loading="lazy">
+    <figcaption>Old Model</figcaption>
+  </figure>
+  <figure>
+    <img src="{{ '/assets/img/segmentation-new-model.jpg' | relative_url }}" alt="New model segmentation of the same plate: hypocotyls are labeled continuously along their full length" loading="lazy">
+    <figcaption>New Model</figcaption>
+  </figure>
+</div>
+
 More detail on how the model gets retrained is on the
 [training page](training.html); the technical class-label reference lives
 on the [architecture notes](architecture.html) page.
