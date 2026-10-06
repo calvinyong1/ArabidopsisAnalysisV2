@@ -4,3 +4,6 @@ _site/
 .sass-cache/
 Gemfile
 Gemfile.lock
+WORKFLOW.md
+# Jekyll/editor extras
+.DS_Store
