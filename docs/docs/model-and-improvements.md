@@ -76,6 +76,18 @@ have been found and fixed:
   nearby plant's instead, since it just picked the biggest matching blob it
   could see. It now anchors on where *that specific plant's* seed was
   originally placed, so it can no longer borrow a neighbor's growth.
+
+<div class="compare wide">
+  <figure>
+    <img src="{{ '/assets/img/hypocotyl-neighbor-before.png' | relative_url }}" alt="Before the fix: the hypocotyl measurement (yellow) is drawn on the neighboring plant to the right, while the tracked plant's own root is shown in red" loading="lazy">
+    <figcaption>Before</figcaption>
+  </figure>
+  <figure>
+    <img src="{{ '/assets/img/hypocotyl-neighbor-after.png' | relative_url }}" alt="After the fix: the hypocotyl measurement (yellow) sits on the tracked plant itself, directly above its red root" loading="lazy">
+    <figcaption>After</figcaption>
+  </figure>
+</div>
+
 - **Hypocotyl length no longer gets wiped to zero early in an experiment.**
   Hypocotyl growth is measured independently of the root, but a bug caused
   it to be reported as `0` on any frame where the root hadn't been
