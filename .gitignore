@@ -5,3 +5,6 @@ __pycache__/
 .claude/
 CLAUDE.md
 .vscode/
+tempCodeRunnerFile.*
+.ipynb_checkpoints/
+*.log
