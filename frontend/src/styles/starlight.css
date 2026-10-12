@@ -329,6 +329,7 @@ section.step > :not(:first-child) { max-width: 100%; }
 .doc-box.sage { background: var(--sage); border-color: var(--sage-line); }
 .doc-box > :first-child { margin-top: 0; }
 .doc-box > :last-child { margin-bottom: 0; }
+.doc-box .sl-heading-wrapper { font-size: 16px; line-height: 1.2; }
 .doc-box .sl-heading-wrapper h2 {
   margin: 0 0 12px;
   font-family: var(--font-accent); font-size: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
