@@ -277,6 +277,7 @@ PLISTEOF
     echo "  Apps installed in: $APP_DIR"
     echo "  - ChronoRoot Analysis.app"
     echo "  - ChronoRoot Segmentation.app"
+    echo "  - ChronoRoot Image Aligner.app"
     echo ""
     echo "  Desktop shortcuts added to: ~/Desktop"
     echo ""

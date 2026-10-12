@@ -38,6 +38,7 @@ The installer will automatically:
 6. **Create macOS `.app` launchers** in `~/Applications/` with desktop shortcuts on `~/Desktop/`:
    - `ChronoRoot Analysis.app`
    - `ChronoRoot Segmentation.app`
+   - `ChronoRoot Image Aligner.app`
 
 ### Step 3 — First launch (Gatekeeper)
 
@@ -123,4 +124,4 @@ Ensure `libzbar` is installed via Homebrew: `brew install zbar`. The `DYLD_LIBRA
 Expected on macOS — nnUNet runs on CPU. For GPU-accelerated segmentation, use a Linux machine with a CUDA-capable GPU and the Linux installer.
 
 **App won't open / "damaged" warning**
-Run `xattr -cr ~/Desktop/"ChronoRoot Analysis.app"` (or the Segmentation app) in the terminal to clear the quarantine flag, then try opening again.
+Run `xattr -cr ~/Desktop/"ChronoRoot Analysis.app"` (or the Segmentation or Image Aligner app) in the terminal to clear the quarantine flag, then try opening again.
