@@ -9,6 +9,13 @@ import { Steps, Aside } from '@astrojs/starlight/components';
 import { Image } from 'astro:assets';
 import alignerWindow from '../../../assets/image-aligner-window.png';
 
+<Aside type="note" title="Optional step">
+Run the Image Aligner only if your experiment shows horizontal drift between
+frames, meaning the plate or camera shifted sideways during the timelapse. If your
+frames are already lined up, skip this app and go straight to
+[Segmentation](../segmentation/).
+</Aside>
+
 <div class="doc-box">
 
 ## At a Glance
