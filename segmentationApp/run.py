@@ -250,7 +250,7 @@ class nnUNetMonitorUI(QMainWindow):
         # New: Hide Empty Folders Checkbox
         self.hide_empty_checkbox = QCheckBox("Hide Empty Folders")
         self.hide_empty_checkbox.setToolTip("Hide folders that contain no images or data")
-        self.hide_empty_checkbox.stateChanged.connect(self.refresh_data) 
+        self.hide_empty_checkbox.stateChanged.connect(self.update_table)
         
         self.species_combo = QComboBox()
         self.species_combo.addItems(get_available_models() or ["No models found"])
@@ -306,7 +306,7 @@ class nnUNetMonitorUI(QMainWindow):
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch) # Robot Name stretches
+        header.setSectionResizeMode(0, QHeaderView.Stretch) # Experiment name stretches
         self.table.setColumnWidth(1, 100)  # Folder Name
         self.table.setColumnWidth(2, 60)  # Images
         self.table.setColumnWidth(3, 120)  # Segmentation %
@@ -564,6 +564,8 @@ class nnUNetMonitorUI(QMainWindow):
                     continue
                 
                 s = data['status']
+                if self.hide_empty_checkbox.isChecked() and s == 'No Images':
+                    continue
                 if status_filter != "All Status":
                     if status_filter == "Error" and "Error" not in s: continue
                     elif status_filter == "Complete" and "Complete" not in s: continue
@@ -599,7 +601,11 @@ class nnUNetMonitorUI(QMainWindow):
 
             for row, data in enumerate(filtered_rows):
                 self.table.setItem(row, 0, QTableWidgetItem(data['robot']))
-                self.table.setItem(row, 1, QTableWidgetItem(os.path.basename(data['path'])))
+                folder_name = os.path.basename(data['path'])
+                if folder_name == "aligned":
+                    # Disambiguate from other plates' aligned folders
+                    folder_name = os.path.join(os.path.basename(os.path.dirname(data['path'])), folder_name)
+                self.table.setItem(row, 1, QTableWidgetItem(folder_name))
                 self.table.setItem(row, 2, QTableWidgetItem(str(data['total_images'])))
                 
                 # Segmentation %
@@ -803,11 +809,11 @@ class nnUNetMonitorUI(QMainWindow):
     def load_robot(self):
         """
         Opens a custom file dialog allowing multiple folder selection.
-        Always uses the folder name as the Robot Name (no prompts).
+        Always uses the folder name as the experiment name (no prompts).
         """
                 
         # 1. Setup Custom Dialog for Multi-Select
-        dialog = QFileDialog(self, "Select Robot Folder(s)")
+        dialog = QFileDialog(self, "Select Experiment Folder(s)")
         dialog.setFileMode(QFileDialog.Directory)
         dialog.setOption(QFileDialog.DontUseNativeDialog, True)
         dialog.setOption(QFileDialog.ShowDirsOnly, True)
@@ -839,7 +845,7 @@ class nnUNetMonitorUI(QMainWindow):
                 loaded_count += 1
             
             if loaded_count > 0:
-                self.log_message(f"Loaded {loaded_count} robot(s).")
+                self.log_message(f"Loaded {loaded_count} experiment(s).")
                 self.update_robot_filter()
 
     def discover_robot_paths(self, robot_name):
@@ -854,6 +860,10 @@ class nnUNetMonitorUI(QMainWindow):
                 full_path = os.path.join(r_path, item)
                 if os.path.isdir(full_path):
                     found_paths.add(full_path)
+                    # Image Aligner output nested inside a plate folder
+                    aligned_path = os.path.join(full_path, "aligned")
+                    if os.path.isdir(aligned_path):
+                        found_paths.add(aligned_path)
         except Exception as e:
             self.log_message(f"Discovery Error: {e}")
             return
@@ -890,10 +900,10 @@ class nnUNetMonitorUI(QMainWindow):
         """Removes the currently selected robot from the UI."""
         target_robot = self.robot_filter.currentText()
         if target_robot == "All Experiments":
-            QMessageBox.warning(self, "Selection Error", "Please select a specific robot using the filter to remove it from the view.")
+            QMessageBox.warning(self, "Selection Error", "Please select a specific experiment using the filter to remove it from the view.")
             return
 
-        reply = QMessageBox.question(self, 'Remove Robot', 
+        reply = QMessageBox.question(self, 'Remove Experiment', 
                                      f"Remove '{target_robot}' from view?",
                                      QMessageBox.Yes | QMessageBox.No)
         
@@ -1072,7 +1082,7 @@ class nnUNetMonitorUI(QMainWindow):
         self.robot_filter.addItem("All Experiments")
         self.robot_filter.addItems(list(self.robots.keys()))
         self.robot_filter.setCurrentText(curr)
-        self.robot_count_label.setText(f"Robots: {len(self.robots)}")
+        self.robot_count_label.setText(f"Experiments: {len(self.robots)}")
 
     def set_alpha_parameter(self):
         val, ok = QInputDialog.getDouble(self, 'Alpha', 'Value:', self.alpha_parameter, 0.0, 1.0, 2)
