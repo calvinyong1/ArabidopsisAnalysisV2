@@ -1,3 +1,42 @@
+# Changes — 2026-10-14
+
+## `analysis/qr.py`
+
+### 1. ArUco corner refinement changed from SUBPIX to APRILTAG
+
+**Symptom:** On `plate1` the detected side length of the (rigid, fixed-camera)
+marker varied from 401 to 427 px (std 4.1 px) across 42 frames; centroid y
+jumped by up to 17 px. `plate2` was milder (std 1.2 px).
+
+**Cause:** `CORNER_REFINE_SUBPIX` with the default 5 px window gave no better
+corner accuracy than no refinement at all on these images.
+
+**Fix:** `aruco_detect_full()` (new; `aruco_detect()` now wraps it with an
+unchanged return value) uses `CORNER_REFINE_APRILTAG`. Side-length std drops to
+0.2 px on both plates. Per-frame x-shift used by the aligner changes by at most
+0.6 px (mean ~0.25 px), so the main gain is for corner-based quantities such as
+`aruco_get_pixel_size` (mm per pixel), not alignment.
+
+**Tradeoff:** detection is ~12x slower (0.87 s vs 0.07 s per 4608x2592 frame).
+Pixel sizes computed after this change will differ slightly from earlier runs.
+
+## `imageAligner/process.py`, `imageAligner/run.py`
+
+### 2. Aligner now tracks the reference marker by ID instead of taking index 0
+
+**Cause:** `compute_transforms` used `corners[0]`, the first marker in each
+frame's detections, with no ID check, and OpenCV does not guarantee order. On
+`plate2` frame 28 the detector also reports a spurious 35 px marker (ID 17)
+next to the real 413 px marker (ID 2); the real one happened to come first.
+If the order flipped, that frame would shift by ~130 px.
+
+**Fix:** the reference is the largest marker in frame 0 (`pick_reference_id`);
+every frame is matched to that ID (`select_marker`, larger wins if the ID
+appears twice). A frame without the reference ID is left unaligned, same as a
+frame with no marker. `compute_transforms` now takes one `(4,2)` array (or
+`None`) per frame. Results on `plate1`/`plate2` are unchanged, since each has
+one real marker.
+
 # Changes — 2026-09-03
 
 ## `analysis/imageUtils/seg.py`

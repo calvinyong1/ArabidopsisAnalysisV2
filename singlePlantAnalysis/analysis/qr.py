@@ -163,7 +163,8 @@ def aruco_detect_full(img):
     # so callers that need IDs or rejected candidates share aruco_detect's settings.
     dictionary = aruco.getPredefinedDictionary(aruco.DICT_4X4_1000)
     parameters = aruco.DetectorParameters()
-    parameters.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
+    # APRILTAG refinement keeps a rigid marker's side length constant to ~0.2 px; SUBPIX (win 5) was ~1-4 px off
+    parameters.cornerRefinementMethod = aruco.CORNER_REFINE_APRILTAG
     detector = aruco.ArucoDetector(dictionary, parameters)
     return detector.detectMarkers(img)
 
