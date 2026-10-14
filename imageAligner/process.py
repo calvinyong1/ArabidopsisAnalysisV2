@@ -7,7 +7,7 @@ import sys
 import scipy.ndimage
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
-from singlePlantAnalysis.analysis.qr import aruco_detect
+from singlePlantAnalysis.analysis.qr import aruco_detect_full
 
 # Open folder_path and return every image as a list
 def get_input_folder(folder_path):
@@ -21,34 +21,70 @@ def get_input_folder(folder_path):
     
     return matching_files
 
-# Detect the marker corners in each image and return them as a list
+# Detect every marker in one frame. Returns (corners, ids), or (None, None) if nothing was found
+def detect_frame(image_path):
+    gray = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
+    if gray is None:
+        return None, None
+    corners, ids, _ = aruco_detect_full(gray)
+    if ids is None or len(ids) == 0:
+        return None, None
+    return corners, ids
+
+def _perimeter(marker):
+    pts = marker.reshape(4, 2)
+    return float(np.linalg.norm(pts - np.roll(pts, 1, axis=0), axis=1).sum())
+
+# The reference marker is the largest one in the first frame. The printed marker is far
+# bigger than the false positives the detector sometimes reports elsewhere in the scene.
+def pick_reference_id(corners, ids):
+    largest = max(range(len(corners)), key=lambda k: _perimeter(corners[k]))
+    return int(ids.flatten()[largest])
+
+# Index (into corners/ids) of the marker with this ID, or None. If the ID shows up twice, the larger one wins.
+def select_marker_index(corners, ids, marker_id):
+    if corners is None or marker_id is None:
+        return None
+    matches = [k for k, i in enumerate(ids.flatten()) if int(i) == marker_id]
+    if not matches:
+        return None
+    return max(matches, key=lambda k: _perimeter(corners[k]))
+
+# The (4,2) corner array of the marker with this ID, or None
+def select_marker(corners, ids, marker_id):
+    k = select_marker_index(corners, ids, marker_id)
+    return None if k is None else corners[k].reshape(4, 2)
+
+# Detect the reference marker in each image and return its corners as a list of (4,2) arrays (None where missing)
 def detect_marker_corners(image_paths):
-    marker_corners = [] # Array of coordinates of the marker in each frame with shape (N,1,4,2)
-    for image in image_paths:
-        corners = aruco_detect(str(image))
-        
-        if corners is None:
-            print(f"Warning: no marker detected in {image.name}")
-            marker_corners.append(None)
-        else:
-            marker_corners.append(corners)
-        
+    marker_corners = []
+    ref_id = None
+    for n, image in enumerate(image_paths):
+        corners, ids = detect_frame(image)
+        if n == 0 and corners is not None:
+            ref_id = pick_reference_id(corners, ids)
+        marker = select_marker(corners, ids, ref_id)
+
+        if marker is None:
+            print(f"Warning: reference marker not detected in {image.name}")
+        marker_corners.append(marker)
+
     return marker_corners
 
-# Aligns images to the aruco marker in the first frame
+# Aligns images to the aruco marker in the first frame. marker_corners is a list of one (4,2) array per frame, None where missing
 def compute_transforms(marker_corners):
     if marker_corners[0] is None:
         raise ValueError("No ArUco marker detected in the first frame — cannot establish reference.")
-    
+
     # The first image is used as the reference point
-    reference = marker_corners[0][0][0].astype(np.float32)
+    reference = marker_corners[0].astype(np.float32)
     transforms = [] # Array of transformation that needs to be applied to each image
-    
+
     for i, corners in enumerate(marker_corners):
         if corners is None:
             transforms.append(None)
         else:
-            current = corners[0][0].astype(np.float32)
+            current = corners.astype(np.float32)
             ref_centroid = np.mean(reference, axis=0)
             cur_centroid = np.mean(current, axis=0)
             tx = ref_centroid[0] - cur_centroid[0]

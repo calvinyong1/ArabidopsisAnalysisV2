@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import process
 from pathlib import Path
+from verify_window import VerifyWindow
 
 # Suppress Qt and OpenGL warnings
 os.environ['QT_LOGGING_RULES'] = '*=false'
@@ -35,14 +36,20 @@ class AlignWorker(QThread):
             total = len(image_paths)
 
             # Detection loop — inlined for per-image progress
+            # Every frame is matched to the reference marker (largest marker in frame 0) by ID
             marker_corners = []
+            ref_id = None
             for i, image in enumerate(image_paths):
-                corners = process.aruco_detect(str(image))
-                if corners is None:
-                    self.progress.emit(i + 1, total * 2, f"Warning: no marker detected in {image.name}")
+                corners, ids = process.detect_frame(image)
+                if i == 0 and corners is not None:
+                    ref_id = process.pick_reference_id(corners, ids)
+                    self.progress.emit(1, total * 2, f"Reference marker: ID {ref_id}")
+                marker = process.select_marker(corners, ids, ref_id)
+                if marker is None:
+                    self.progress.emit(i + 1, total * 2, f"Warning: reference marker not detected in {image.name}")
                 else:
                     self.progress.emit(i + 1, total * 2, f"Detecting: {image.name}")
-                marker_corners.append(corners)
+                marker_corners.append(marker)
 
             # Check first frame before computing transforms
             if marker_corners[0] is None:
@@ -115,6 +122,7 @@ class ImageAlignerUI(QMainWindow):
         self.processing_queue = [] # list of str paths
         self.current_worker = None
         self.current_progress = 0
+        self.verify_window = None
 
         self.init_ui()
         self.setup_timer()
@@ -150,9 +158,9 @@ class ImageAlignerUI(QMainWindow):
 
         # --- Table ---
         self.table = QTableWidget()
-        self.table.setColumnCount(7)
+        self.table.setColumnCount(8)
         self.table.setHorizontalHeaderLabels([
-            "Folder", "Images", "Aligned", "Progress", "Status", "Action", "Remove"
+            "Folder", "Images", "Aligned", "Progress", "Status", "Action", "Verify", "Remove"
         ])
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
 
@@ -164,6 +172,7 @@ class ImageAlignerUI(QMainWindow):
         self.table.setColumnWidth(4, 100)
         self.table.setColumnWidth(5, 150)
         self.table.setColumnWidth(6, 80)
+        self.table.setColumnWidth(7, 80)
 
         layout.addWidget(self.table)
 
@@ -258,6 +267,18 @@ class ImageAlignerUI(QMainWindow):
 
                 self._set_row_action(row, data)
 
+                verify_btn = QPushButton("Verify")
+                verify_btn.setToolTip("Scroll through frames and check the detected ArUco marker position")
+                verify_btn.setFixedSize(70, 25)
+                verify_btn.setEnabled(data['total_images'] > 0)
+                verify_btn.clicked.connect(lambda _, p=data['path']: self.open_verify(p))
+                w_vf = QWidget()
+                l_vf = QHBoxLayout(w_vf)
+                l_vf.setContentsMargins(0, 0, 0, 0)
+                l_vf.setAlignment(Qt.AlignCenter)
+                l_vf.addWidget(verify_btn)
+                self.table.setCellWidget(row, 6, w_vf)
+
                 rm_btn = QPushButton("Remove")
                 rm_btn.setToolTip("Stop monitoring this folder (does not delete files)")
                 rm_btn.setFixedSize(70, 25)
@@ -268,7 +289,7 @@ class ImageAlignerUI(QMainWindow):
                 l_rm.setContentsMargins(0, 0, 0, 0)
                 l_rm.setAlignment(Qt.AlignCenter)
                 l_rm.addWidget(rm_btn)
-                self.table.setCellWidget(row, 6, w_rm)
+                self.table.setCellWidget(row, 7, w_rm)
         finally:
             self.table.setUpdatesEnabled(True)
 
@@ -371,6 +392,16 @@ class ImageAlignerUI(QMainWindow):
             self.processing_queue.remove(path)
             self.update_queue_label()
             self.refresh_data()
+
+    def open_verify(self, path):
+        # Owned here, not by the row: the table is rebuilt every 1-3 seconds
+        if self.verify_window is not None:
+            self.verify_window.close()
+        window = VerifyWindow(path, self)
+        # destroyed fires late (deleteLater), so only clear if it's still the current window
+        window.destroyed.connect(lambda: setattr(self, 'verify_window', None) if self.verify_window is window else None)
+        self.verify_window = window
+        window.show()
 
     def remove_folder(self, path):
         self.folders.pop(path, None)
