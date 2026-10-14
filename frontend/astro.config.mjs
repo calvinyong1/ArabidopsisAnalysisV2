@@ -76,7 +76,6 @@ export default defineConfig({
         { label: "What's New in This Fork", slug: 'docs/model-and-improvements' },
         { label: 'Training the Model', slug: 'docs/training' },
         { label: 'Architecture Notes', slug: 'docs/architecture' },
-        { label: 'Full Changelog', slug: 'docs/changelog' },
       ],
     }),
   ],
