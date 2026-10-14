@@ -99,6 +99,13 @@ have been found and fixed:
   it to be reported as `0` on any frame where the root hadn't been
   successfully detected yet, even though the real hypocotyl measurement was
   sitting right there. That data is no longer thrown away.
+- **Improved root tracking algorithm**
+  The software used to treat the lowest point in the image as the tip of
+  the main root. A side root that dipped below it, or a main root that
+  curved sideways near the end, could make the software follow the wrong
+  root and report its length as the main root length. The main root is now
+  measured as the longest path from the root origin to a root tip, so it no 
+  longer depends on which root happens to sit lowest.
 - **Growth charts no longer come out empty or cut short** for experiments
   that don't photograph every 15 minutes. The chart-building step assumed a
   fixed 15-minute interval between photos; any other interval (say, every 3
@@ -112,16 +119,6 @@ have been found and fixed:
 - **`.tif`/`.tiff` photos are recognized.** Experiments captured in those
   formats used to be silently skipped entirely, because the software only
   looked for `.png` files.
-- **A crash on fresh installs during report generation was fixed.** A
-  dependency update elsewhere had started breaking report generation for
-  everyone, right after installation. This is now pinned to a working
-  version.
-- **Output folders are simpler.** An unused extra folder level (left over
-  from a multi-camera-rig setup this project doesn't use) was removed from
-  where results get saved.
-
-The full dated list of every fix is on the [changelog](../changelog/)
-page.
 
 ## Known Issues Still Being Worked On
 
