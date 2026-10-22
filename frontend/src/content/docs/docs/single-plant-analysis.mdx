@@ -15,6 +15,7 @@ import selectRootOrigin from '../../../assets/select-root-origin.png';
 import selectRootOriginBad from '../../../assets/select-root-origin-bad.png';
 import analysisOverview from '../../../assets/analysis-overview.png';
 import plantOverlay from '../../../assets/plant-overlay.png';
+import reportTab from '../../../assets/report-tab.png';
 
 <div class="doc-box">
 
@@ -63,7 +64,7 @@ elsewhere as long as they have not been moved.
 ## Launch the App
 The installers create a `ChronoRoot Analysis` launcher (first
 launch: right-click, then **Open**). Launch from a terminal if you want to see the
-progress messages (see Step 8).
+progress messages (see Step 9).
 
 ```bash title="BASH"
 conda activate ChronoRoot
@@ -145,10 +146,14 @@ Everything in this part happens on the **Plant Analysis** tab, under the heading
    | **Emergence distance** | mm. Distance from the main root at which a lateral root counts as emerged (used for lateral-root angle analysis) |
    | **Save Cropped Images** (checkbox) | Saves per-plant crops. Required for making growth timelapse videos |
 
-   Optionally click **Preview video** to open the sequence viewer on the raw frames
-   and eyeball image quality and segmentation.
+6. #### Preview The Video
 
-6. #### Click Analyze Plant and draw the ROI
+   Click the "Preview Video" button to open the sequence viewer. Use the scrollbar to
+   navigate between frames and press the "S" button to toggle the segmentation overlay
+   for visual inspection. Use this step to spot any segmentation errors and determin if a plant 
+   is fit to be analyzed.
+
+7. #### Click Analyze Plant and draw the ROI
 
    Click **Analyze Plant**. The app validates your inputs, saves the configuration,
    and starts the analysis in a separate process. A window called **"Select Plant
@@ -168,7 +173,7 @@ Everything in this part happens on the **Plant Analysis** tab, under the heading
      <figcaption><span class="fig-label">FIG_04 · Select Plant ROI</span><span>The Select Plant ROI window with a plant selected.</span></figcaption>
    </figure>
 
-7. #### Click the root origin
+8. #### Click the root origin
 
    A second window, **"Select Root Origin"**, shows the cropped ROI.
 
@@ -204,7 +209,7 @@ Everything in this part happens on the **Plant Analysis** tab, under the heading
    </figure>
 
    On the bad selection, the root origin was selected based on the original seed position, however shift in the plants position during growth caused the root to be established above the selected point, causing any measured root growth above it to be discarded. Use the slider on the top of the window to go through the whole movie and accurately select the root origin.
-8. #### Wait for tracking, then repeat for the next plant
+9. #### Wait for tracking, then repeat for the next plant
 
    Tracking runs through every frame. Progress prints in the terminal that launched
    the app.
@@ -230,7 +235,7 @@ Everything in this part happens on the **Plant Analysis** tab, under the heading
 | **Save** | Writes all fields to the global config and to `<project>/project_config.json` |
 | **Preview video** | Opens the sequence viewer on the raw frames |
 | **Analyze Plant** | Validates inputs, saves config, and starts the analysis in a separate process |
-| **Process all plants** | Runs post-processing for the whole project (see Step 11) |
+| **Process all plants** | Runs post-processing for the whole project (see Step 12) |
 | **Load config json from file** | Pick any saved `.json` config and fill the form |
 | **Load previous configuration** | Restore the last saved settings (project config if it exists, otherwise global) |
 
@@ -238,20 +243,20 @@ Everything in this part happens on the **Plant Analysis** tab, under the heading
 
 <Steps>
 
-9. #### Check every plant on the Analysis Overview tab
+10. #### Check every plant on the Analysis Overview tab
 
-   Open the **Analysis Overview** tab. It lists every analysed plant under
-   `<project>/Analysis/` and refreshes whenever you switch to it.
+    Open the **Analysis Overview** tab. It lists every analysed plant under
+    `<project>/Analysis/` and refreshes whenever you switch to it.
 
-   Check that each plant's **Status** is *Finished* and look at the **Error Rate**
-   (lower is better). Select a row to use the buttons below it.
+    Check that each plant's **Status** is *Finished* and look at the **Error Rate**
+    (lower is better). Select a row to use the buttons below it.
 
-   <figure class="app-shot">
-     <Image src={analysisOverview} alt="The Analysis Overview tab of the ChronoRootAnalysis window. A table with columns Experiment, Camera, Plant Number, Result ID, Error Rate, Status and Finish Date lists three finished plants, and the buttons Refresh, Open Path, Remove Plant, Repeat Analysis and Process all plants run along the bottom." widths={[800, 1200, 1600]} sizes="(min-width: 50rem) 700px, 100vw" />
-     <figcaption><span class="fig-label">FIG_06 · Analysis Overview</span><span>The Analysis Overview tab with three finished plants.</span></figcaption>
-   </figure>
+    <figure class="app-shot">
+      <Image src={analysisOverview} alt="The Analysis Overview tab of the ChronoRootAnalysis window. A table with columns Experiment, Camera, Plant Number, Result ID, Error Rate, Status and Finish Date lists three finished plants, and the buttons Refresh, Open Path, Remove Plant, Repeat Analysis and Process all plants run along the bottom." widths={[800, 1200, 1600]} sizes="(min-width: 50rem) 700px, 100vw" />
+      <figcaption><span class="fig-label">FIG_06 · Analysis Overview</span><span>The Analysis Overview tab with three finished plants.</span></figcaption>
+    </figure>
 
-10. #### Inspect plants on the Plant Overlay tab
+11. #### Inspect plants on the Plant Overlay tab
 
     The **Plant Overlay** tab provides visual inspection capabilities for both 
     segmentation results and plant root performance analysis. This interface allows 
@@ -275,7 +280,7 @@ Everything in this part happens on the **Plant Analysis** tab, under the heading
       <figcaption><span class="fig-label">FIG_07 · Plant Overlay</span><span>The Plant Overlay tab with the overlay on and the summary plot on the right.</span></figcaption>
     </figure>
 
-11. #### Process all plants
+12. #### Process all plants
 
     Press **Process all plants** (on the Plant Analysis, Analysis Overview or
     Generate Report tab). This is post-processing: pixel-size conversion, hourly
@@ -283,7 +288,7 @@ Everything in this part happens on the **Plant Analysis** tab, under the heading
 
     Do this before generating the report.
 
-12. #### Generate the report
+13. #### Generate the report
 
     Open the **Generate Report** tab, choose the analyses you want, and press
     **Generate report**. Report generation can take a while; progress prints in the
@@ -292,10 +297,15 @@ Everything in this part happens on the **Plant Analysis** tab, under the heading
     Statistical comparisons are between experiments (identifiers). See the
     [tab reference](#tab-reference) for every option.
 
-13. #### Browse the report
+14. #### Browse the report
 
     Open the **Report** tab. Pick a figure from the dropdown, or click **Open Report
     Path** to open the report folder.
+
+    <figure class="app-shot">
+      <Image src={reportTab} alt="The Report tab of the ChronoRootAnalysis window showing a line chart titled Main Root Length Over Time, with elapsed time in hours on the x-axis and main root length in millimetres on the y-axis. Two series are plotted, one labelled 1 with a shaded band and one labelled Col0. A dropdown at the bottom selects the figure, with the buttons Open Report Path and Refresh beside it." widths={[800, 1200, 1600]} sizes="(min-width: 50rem) 700px, 100vw" />
+      <figcaption><span class="fig-label">FIG_08 · Report tab</span><span>The Report tab showing a generated figure.</span></figcaption>
+    </figure>
 
 </Steps>
 
@@ -354,8 +364,6 @@ Overlay colours: main root **red**, lateral roots **green**, hypocotyl **yellow*
 | **Redo Analysis** | **Manual re-run:** discards the saved ROI and root start so you pick new ones |
 | **Remove Plant** | Move to `Removed/` |
 
-<div class="placeholder-shot">[SCREENSHOT: ChronoRoot Viewer (sequence viewer)]</div>
-
 </details>
 
 <details>
@@ -391,8 +399,6 @@ A figure browser. The dropdown lists every PNG one level inside `<project>/Repor
 (newest names first).
 
 Buttons: **Refresh**, **Open Report Path**.
-
-<div class="placeholder-shot">[SCREENSHOT: Report tab showing a figure]</div>
 
 </details>
 
