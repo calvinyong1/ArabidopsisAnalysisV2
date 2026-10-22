@@ -6,8 +6,8 @@ tableOfContents:
 ---
 
 import { Steps, Aside } from '@astrojs/starlight/components';
-import { Image } from 'astro:assets';
-import alignerWindow from '../../../assets/image-aligner-window.png';
+import beforeGif from '../../../assets/aligner-before.gif';
+import afterGif from '../../../assets/aligner-after.gif';
 
 <Aside type="note" title="Optional step">
 Run the Image Aligner only if your experiment shows horizontal drift between
@@ -27,8 +27,17 @@ the plate or camera shifted sideways during the timelapse.
 </div>
 
 <figure class="app-shot">
-  <Image src={alignerWindow} alt="The Image Aligner window with eight plate folders loaded: plate1 is Aligning with a Kill Process button, three folders are Complete with Re-align buttons, and four are Not Started with Align buttons." widths={[800, 1200, 1600]} sizes="(min-width: 50rem) 780px, 100vw" />
-  <figcaption><span class="fig-label">FIG_01 · Main window</span><span>The Image Aligner window with several folders loaded.</span></figcaption>
+  <div class="shot-row">
+    <div class="shot-cell">
+      <img class="shot-gif" src={beforeGif.src} width={beforeGif.width} height={beforeGif.height} alt="Timelapse of a plate before running the Image Aligner. The plate and its ArUco marker drift sideways between frames." loading="lazy" decoding="async" />
+      <span class="shot-label bad">Before alignment</span>
+    </div>
+    <div class="shot-cell">
+      <img class="shot-gif" src={afterGif.src} width={afterGif.width} height={afterGif.height} alt="The same timelapse after running the Image Aligner. The plate and its ArUco marker stay in place from frame to frame." loading="lazy" decoding="async" />
+      <span class="shot-label good">After alignment</span>
+    </div>
+  </div>
+  <figcaption><span class="fig-label">FIG_01 · Before and after</span><span>The same timelapse before and after running the Image Aligner.</span></figcaption>
 </figure>
 
 ## Before You Start
