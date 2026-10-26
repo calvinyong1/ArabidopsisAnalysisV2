@@ -149,3 +149,32 @@ def saveImages(conf, images, frame_idx, segmentation_mask, graph=None, skeleton_
     cv2.imwrite(segmulti_path, colored_image)
     
     return
+
+def saveInputVideo(conf, fps=10):
+    """
+    Stitch the saved cropped images (Images/Input) into a time-lapse video
+    stored in that same folder. No-op unless saveImages is enabled.
+    """
+    if not conf['saveImages']:
+        return
+
+    input_folder = os.path.join(conf['folders']['images'], "Input")
+    frame_paths = sorted(
+        os.path.join(input_folder, f) for f in os.listdir(input_folder)
+        if f.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.tiff'))
+    )
+    if not frame_paths:
+        return
+
+    first = cv2.imread(frame_paths[0])
+    height, width = first.shape[:2]
+    writer = cv2.VideoWriter(os.path.join(input_folder, "cropped_timelapse.mp4"),
+                             cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
+    for path in frame_paths:
+        frame = cv2.imread(path)
+        if frame is None:
+            continue
+        if frame.shape[:2] != (height, width):
+            frame = cv2.resize(frame, (width, height))
+        writer.write(frame)
+    writer.release()

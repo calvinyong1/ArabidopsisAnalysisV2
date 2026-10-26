@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from .utils.fileUtilities import createSaveFolder, getImages, saveMetadata
 from .utils.getROIandSeed import getROIandSeed
 from .imageUtils.seg import extract_root_segmentation, extract_skeleton
-from .imageUtils.plot import saveImages
+from .imageUtils.plot import saveImages, saveInputVideo
 from .graphUtils.save import saveGraph, saveProps
 from .graphUtils.graph import createGraph
 from .graphUtils.graphTrim import trimGraph
@@ -347,6 +347,7 @@ def plantAnalysis(conf, replicate=False):
             saveProps(frame_name, frame_idx, current_graph, csv_writer, current_lateral_count, current_hypocotyl_length)
         
         print('\n\nGrowth tracking complete')
+        saveInputVideo(conf)
         print('Saving outputs...')
         log_path = os.path.join(output_folders['result'], "log.txt")
         with open(log_path, 'w+') as log_file:
