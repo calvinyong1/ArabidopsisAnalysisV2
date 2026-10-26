@@ -5,7 +5,8 @@ import cv2
 import numpy as np
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QSlider, QLabel, QPushButton, QGraphicsView, 
-                             QGraphicsScene, QGraphicsPixmapItem, QFrame, QStyle)
+                             QGraphicsScene, QGraphicsPixmapItem, QFrame, QStyle,
+                             QApplication, QMessageBox)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QColor
 
@@ -176,8 +177,12 @@ class ChronoViewWindow(QMainWindow):
         self.btn_seg.setFixedHeight(35)
         self.btn_seg.clicked.connect(self.toggle_seg)
         
+        self.btn_save_video = QPushButton("Save Timelapse")
+        self.btn_save_video.setFixedHeight(35)
+        self.btn_save_video.clicked.connect(self.save_timelapse)
+
         btn_style = "QPushButton { font-size: 11pt; font-weight: bold; background-color: #e1e1e1; border: 1px solid #adadad; border-radius: 4px; } QPushButton:hover { background-color: #d4d4d4; } QPushButton:pressed { background-color: #c0c0c0; }"
-        for b in [self.btn_play, self.btn_seg]:
+        for b in [self.btn_play, self.btn_seg, self.btn_save_video]:
             b.setStyleSheet(btn_style)
             h_layout.addWidget(b)
             
@@ -284,3 +289,37 @@ class ChronoViewWindow(QMainWindow):
     def toggle_seg(self):
         self.use_seg = not self.use_seg
         self.update_display()
+
+    def save_timelapse(self):
+        """Stitch the original (uncropped) images into an mp4 next to them."""
+        fps = 10
+        out_path = os.path.join(os.path.dirname(self.images[0]), "timelapse.mp4")
+        self.btn_save_video.setEnabled(False)
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        writer = None
+        try:
+            for i in range(self.n):
+                frame = cv2.imread(self.images[i])
+                if frame is None:
+                    continue
+                if writer is None:
+                    h, w = frame.shape[:2]
+                    writer = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+                elif frame.shape[:2] != (h, w):
+                    frame = cv2.resize(frame, (w, h))
+                writer.write(frame)
+                self.btn_save_video.setText(f"Saving {i + 1}/{self.n}")
+                QApplication.processEvents()
+            if writer is None:
+                raise RuntimeError("No readable images.")
+            writer.release()
+            writer = None
+            QMessageBox.information(self, "Timelapse saved", f"Saved to:\n{out_path}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save timelapse:\n{e}")
+        finally:
+            if writer is not None:
+                writer.release()
+            QApplication.restoreOverrideCursor()
+            self.btn_save_video.setText("Save Timelapse")
+            self.btn_save_video.setEnabled(True)
