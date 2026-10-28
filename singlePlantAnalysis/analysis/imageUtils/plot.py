@@ -178,3 +178,21 @@ def saveInputVideo(conf, fps=10):
             frame = cv2.resize(frame, (width, height))
         writer.write(frame)
     writer.release()
+
+    # Second video with the SegMulti visualization blended onto each frame
+    segmulti_folder = os.path.join(conf['folders']['images'], "SegMulti")
+    overlaid_writer = cv2.VideoWriter(os.path.join(input_folder, "cropped_timelapse_overlaid.mp4"),
+                                      cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
+    for path in frame_paths:
+        frame = cv2.imread(path)
+        seg = cv2.imread(os.path.join(segmulti_folder, os.path.basename(path)))
+        if frame is None:
+            continue
+        if frame.shape[:2] != (height, width):
+            frame = cv2.resize(frame, (width, height))
+        if seg is not None:
+            if seg.shape[:2] != (height, width):
+                seg = cv2.resize(seg, (width, height), interpolation=cv2.INTER_NEAREST)
+            frame = cv2.addWeighted(frame, 1.0, seg, 0.7, 0)
+        overlaid_writer.write(frame)
+    overlaid_writer.release()

@@ -218,6 +218,33 @@ class ChronoViewWindow(QMainWindow):
         qImg = QImage(img.data.tobytes(), w, h, bytesPerLine, QImage.Format_RGB888)
         return QPixmap.fromImage(qImg)
 
+    def blend_seg(self, img, seg):
+        """Blend a segmentation image (same size as img) onto img."""
+        if seg is None:
+            return img
+        # Case 1: Multi-Channel (Review Mode - Already Colored)
+        if len(seg.shape) == 3:
+            # Handle Alpha Channel if present
+            if seg.shape[2] == 4:
+                seg = cv2.cvtColor(seg, cv2.COLOR_BGRA2BGR)
+            
+            # Original logic used simple addition, which works best for black-background overlays
+            return cv2.addWeighted(img, 1.0, seg, 0.7, 0)
+
+        # Case 2: Single-Channel (Preview Mode - Integer Masks)
+        # Create an empty color overlay
+        color_mask = np.zeros_like(img)
+        
+        # Apply colors based on integer class IDs
+        for val, color in self.colors.items():
+            color_mask[seg == val] = color
+        
+        # Handle extra classes
+        color_mask[seg >= 5] = (255, 0, 255) # Purple
+        
+        # Weighted Blend
+        return cv2.addWeighted(img, 1.0, color_mask, 0.5, 0)
+
     def update_display(self):
         if self.idx >= len(self.images): return
         
@@ -234,33 +261,7 @@ class ChronoViewWindow(QMainWindow):
         
         # 3. Segmentation Overlay
         if self.use_seg and self.segFiles and self.idx < len(self.segFiles):
-            # IMPORTANT: Load as UNCHANGED to detect if it's grayscale (2D) or Color (3D)
-            seg = cv2.imread(self.segFiles[self.idx], cv2.IMREAD_UNCHANGED)
-            
-            if seg is not None:                
-                # Case 1: Multi-Channel (Review Mode - Already Colored)
-                if len(seg.shape) == 3:
-                    # Handle Alpha Channel if present
-                    if seg.shape[2] == 4:
-                        seg = cv2.cvtColor(seg, cv2.COLOR_BGRA2BGR)
-                    
-                    # Original logic used simple addition, which works best for black-background overlays
-                    img = cv2.addWeighted(img, 1.0, seg, 0.7, 0)
-
-                # Case 2: Single-Channel (Preview Mode - Integer Masks)
-                elif len(seg.shape) == 2:
-                    # Create an empty color overlay
-                    color_mask = np.zeros_like(img)
-                    
-                    # Apply colors based on integer class IDs
-                    for val, color in self.colors.items():
-                        color_mask[seg == val] = color
-                    
-                    # Handle extra classes
-                    color_mask[seg >= 5] = (255, 0, 255) # Purple
-                    
-                    # Weighted Blend
-                    img = cv2.addWeighted(img, 1.0, color_mask, 0.5, 0)
+            img = self.blend_seg(img, cv2.imread(self.segFiles[self.idx], cv2.IMREAD_UNCHANGED))
             
         self.pixmap_item.setPixmap(self.cv2_to_qpixmap(img))
         self.lbl_info.setText(f"Day: {self.days[self.idx]}   Time: {self.hours[self.idx]:02d}:{self.minutes[self.idx]:02d}")
@@ -290,13 +291,34 @@ class ChronoViewWindow(QMainWindow):
         self.use_seg = not self.use_seg
         self.update_display()
 
+    def overlay_full_frame(self, frame, i):
+        """Blend frame i's Segmentation/Ensemble_color mask onto the frame.
+
+        The color masks are full-size and share the original image's filename
+        stem (extension differs, e.g. .tif vs .png), so they are matched by stem."""
+        seg_path = self.color_seg_by_stem.get(os.path.splitext(os.path.basename(self.images[i]))[0])
+        if seg_path is None:
+            return frame
+        seg = cv2.imread(seg_path, cv2.IMREAD_UNCHANGED)
+        if seg is None:
+            return frame
+        if seg.shape[:2] != frame.shape[:2]:
+            seg = cv2.resize(seg, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_NEAREST)
+        return self.blend_seg(frame, seg)
+
     def save_timelapse(self):
         """Stitch the original (uncropped) images into an mp4 next to them."""
         fps = 10
         out_path = os.path.join(os.path.dirname(self.images[0]), "timelapse.mp4")
+        overlaid_path = os.path.join(os.path.dirname(self.images[0]), "timelapse_overlaid.mp4")
+        color_dir = os.path.join(os.path.dirname(self.images[0]), "Segmentation", "Ensemble_color")
+        self.color_seg_by_stem = {os.path.splitext(f)[0]: os.path.join(color_dir, f)
+                                  for f in os.listdir(color_dir)} if os.path.isdir(color_dir) else {}
+        can_overlay = bool(self.color_seg_by_stem)
         self.btn_save_video.setEnabled(False)
         QApplication.setOverrideCursor(Qt.WaitCursor)
         writer = None
+        overlay_writer = None
         try:
             for i in range(self.n):
                 frame = cv2.imread(self.images[i])
@@ -305,21 +327,32 @@ class ChronoViewWindow(QMainWindow):
                 if writer is None:
                     h, w = frame.shape[:2]
                     writer = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+                    if can_overlay:
+                        overlay_writer = cv2.VideoWriter(overlaid_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                 elif frame.shape[:2] != (h, w):
                     frame = cv2.resize(frame, (w, h))
                 writer.write(frame)
+                if overlay_writer is not None:
+                    overlay_writer.write(self.overlay_full_frame(frame, i))
                 self.btn_save_video.setText(f"Saving {i + 1}/{self.n}")
                 QApplication.processEvents()
             if writer is None:
                 raise RuntimeError("No readable images.")
             writer.release()
             writer = None
-            QMessageBox.information(self, "Timelapse saved", f"Saved to:\n{out_path}")
+            saved = out_path
+            if overlay_writer is not None:
+                overlay_writer.release()
+                overlay_writer = None
+                saved += f"\n{overlaid_path}"
+            QMessageBox.information(self, "Timelapse saved", f"Saved to:\n{saved}")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save timelapse:\n{e}")
         finally:
             if writer is not None:
                 writer.release()
+            if overlay_writer is not None:
+                overlay_writer.release()
             QApplication.restoreOverrideCursor()
             self.btn_save_video.setText("Save Timelapse")
             self.btn_save_video.setEnabled(True)
