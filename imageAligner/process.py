@@ -169,7 +169,7 @@ def apply_transforms(image_paths,transform_matrices):
         full_path = os.path.join(output_folder, file_name)
         cv2.imwrite(full_path, transformed_image)
         
-
+# Only used for testing
 if __name__ == "__main__":
     folder_path = "/Users/calvinyong/Desktop/UW Madison/Research Materials/Dataset/Experiment  20260528_124038/plate2"
     matching_files = get_input_folder(folder_path)
